@@ -11,7 +11,7 @@ import NotificationItem from '../components/NotificationItem'
 import Toast from '../components/Toast'
 
 export default function RiderDashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const [tab, setTab] = useState('overview')
   const [contract, setContract] = useState(null)
   const [payments, setPayments] = useState([])
@@ -30,7 +30,7 @@ export default function RiderDashboard() {
     const n = await getNotificationsForUser(user.id)
     setNotifications(n)
 
-    if (user.firstLogin && c && (c.status === 'Pending' || c.status === 'Accepted')) {
+    if (user.firstLogin && c && c.status === 'Pending') {
       setStep('accept')
     } else if (user.firstLogin && c && c.status === 'Accepted') {
       setStep('changepwd')
@@ -63,6 +63,7 @@ export default function RiderDashboard() {
       return
     }
     await changePassword(user.id, newPwd)
+    updateUser({ firstLogin: false })
     setToast({ show: true, msg: '✅ Password changed! Welcome to My Mkataba 🎉' })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
     setStep('done')
@@ -82,6 +83,11 @@ export default function RiderDashboard() {
   const balance = contract ? contract.totalAmount - contract.paidAmount : 0
   const daysLeft = contract ? Math.ceil((new Date(contract.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0
   const totalDays = contract ? Math.ceil((new Date(contract.endDate) - new Date(contract.startDate)) / (1000 * 60 * 60 * 24)) : 90
+  const calStatus = {}
+  payments.forEach(p => {
+    const day = parseInt(p.date.match(/\d+/)?.[0], 10)
+    if (day) calStatus[day] = p.status
+  })
 
   const title = tab === 'overview' ? `Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'}, ${user?.name?.split(' ')[0]} 👋` :
     tab === 'contract' ? 'My Contract' :
@@ -188,7 +194,7 @@ export default function RiderDashboard() {
             )}
             <div className="card">
               <div className="card-title">June 2026 – Payment Tracker</div>
-              <CalendarGrid status={null} />
+              <CalendarGrid status={calStatus} />
             </div>
           </>
         )

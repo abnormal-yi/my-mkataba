@@ -1,13 +1,18 @@
 export default function CalendarGrid({ status }) {
-  const startDay = 1
-  const days = 30
-  const today = 12
-  const cells = []
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const startDay = new Date(year, month, 1).getDay()
+  const today = now.getDate()
 
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+  const cells = []
   for (let i = 0; i < startDay; i++) {
     cells.push(<div key={`empty-${i}`} className="cal-day empty" />)
   }
-  for (let d = 1; d <= days; d++) {
+  for (let d = 1; d <= daysInMonth; d++) {
     const cls = status ? (status[d] || 'empty') : 'empty'
     const isToday = d === today
     cells.push(
@@ -19,6 +24,7 @@ export default function CalendarGrid({ status }) {
 
   return (
     <div>
+      <div style={{ textAlign: 'center', fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{monthNames[month]} {year}</div>
       <div className="cal-header">
         <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
       </div>
