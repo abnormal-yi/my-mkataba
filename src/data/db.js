@@ -3,7 +3,7 @@ import Dexie from 'dexie'
 const db = new Dexie('MyMkatabaDB')
 
 db.version(1).stores({
-  users: '++id, name, email, role, phone, nationalId, status, region',
+  users: '++id, name, email, role, phone, nationalId, status, region, createdBy',
   contracts: '++id, contractId, ownerId, riderId, ownerName, riderName, startDate, endDate, paymentType, dailyAmount, totalAmount, paidAmount, motorcycle, status, agreementText, signedDate, region, gracePeriod',
   payments: '++id, contractId, riderId, ownerId, date, amount, method, status',
   notifications: '++id, userId, type, title, desc, time, read',
@@ -19,7 +19,7 @@ export async function seedDatabase() {
     { id: 2, name: 'Hassan Mwangi', email: 'hassan@mkataba.tz', password: '1234', role: 'owner', initials: 'HM', phone: '+255 754 111 222', nationalId: '19880123456789', status: 'Active', region: 'Arusha' },
     { id: 3, name: 'Super Creator', email: 'admin@mkataba.tz', password: '1234', role: 'admin', initials: 'SC', phone: '+255 800 000 000', nationalId: '19850123456789', status: 'Active', region: 'Arusha' },
     { id: 4, name: 'Peter Njau', email: 'peter@mkataba.tz', password: '1234', role: 'rider', initials: 'PJ', phone: '+255 765 432 100', nationalId: '19920123456789', status: 'Overdue', region: 'Arusha' },
-    { id: 5, name: 'David Kesi', email: 'david@mkataba.tz', password: '1234', role: 'rider', initials: 'DK', phone: '+255 688 999 001', nationalId: '19930123456789', status: 'Pending', region: 'Arusha' },
+    { id: 5, name: 'David Kesi', email: 'david@mkataba.tz', password: '1234', role: 'rider', initials: 'DK', phone: '+255 688 999 001', nationalId: '19930123456789', status: 'Pending', region: 'Arusha', firstLogin: true },
     { id: 6, name: 'Ali Rashid', email: 'ali@mkataba.tz', password: '1234', role: 'rider', initials: 'AR', phone: '+255 688 777 002', nationalId: '19940123456789', status: 'Active', region: 'Moshi' },
     { id: 7, name: 'Grace Mbeki', email: 'grace@mkataba.tz', password: '1234', role: 'owner', initials: 'GM', phone: '+255 700 202 303', nationalId: '19870123456789', status: 'Active', region: 'Dar es Salaam' },
   ])
@@ -142,11 +142,12 @@ export async function getSettings() {
 
 export async function createUser(data) {
   const maxId = await db.users.count()
+  const defaultPwd = '1234'
   const user = {
     id: maxId + 1,
     name: data.name,
     email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`,
-    password: '1234',
+    password: defaultPwd,
     role: 'rider',
     initials: data.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
     phone: data.phone || '',
@@ -154,9 +155,10 @@ export async function createUser(data) {
     status: 'Active',
     region: data.region || 'Arusha',
     createdBy: data.createdBy || 0,
+    firstLogin: true,
   }
   await db.users.add(user)
-  return user
+  return { ...user, defaultPwd }
 }
 
 export async function createContract(data) {
@@ -292,6 +294,44 @@ export async function resetDatabase() {
     settings: '++id, key',
   })
   await seedDatabase()
+}
+
+export async function acceptContract(contractId, riderId) {
+  const contract = await db.contracts.where('contractId').equals(contractId).first()
+  if (!contract) return
+  const now = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ` at ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+  await db.contracts.update(contract.id, { status: 'Accepted', signedDate: now })
+
+  await db.notifications.bulkAdd([
+    { userId: riderId, type: 'paid', title: 'Contract Accepted', desc: `You accepted contract #${contractId}. Change your password to continue.`, time: 'Just now', read: false },
+    { userId: contract.ownerId, type: 'warning', title: `Rider Accepted – #${contractId}`, desc: `${contract.riderName} accepted the contract. Confirm to activate.`, time: 'Just now', read: false },
+  ])
+}
+
+export async function rejectContract(contractId, riderId) {
+  const contract = await db.contracts.where('contractId').equals(contractId).first()
+  if (!contract) return
+  await db.contracts.update(contract.id, { status: 'Rejected' })
+
+  await db.notifications.bulkAdd([
+    { userId: riderId, type: 'missed', title: 'Contract Rejected', desc: `You rejected contract #${contractId}.`, time: 'Just now', read: false },
+    { userId: contract.ownerId, type: 'danger', title: `Rider Rejected – #${contractId}`, desc: `${contract.riderName} rejected the contract.`, time: 'Just now', read: false },
+  ])
+}
+
+export async function ownerConfirmContract(contractId) {
+  const contract = await db.contracts.where('contractId').equals(contractId).first()
+  if (!contract) return
+  await db.contracts.update(contract.id, { status: 'Active' })
+
+  await db.notifications.bulkAdd([
+    { userId: contract.riderId, type: 'paid', title: 'Contract Active!', desc: `Your contract #${contractId} is now active. Start making payments.`, time: 'Just now', read: false },
+    { userId: contract.ownerId, type: 'paid', title: 'Contract Confirmed', desc: `Contract #${contractId} with ${contract.riderName} is now active.`, time: 'Just now', read: false },
+  ])
+}
+
+export async function changePassword(userId, newPassword) {
+  await db.users.update(userId, { password: newPassword, firstLogin: false })
 }
 
 export async function saveSettings(settings) {

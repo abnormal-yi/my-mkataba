@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractsForOwner, getPaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider } from '../data/db'
+import { getContractsForOwner, getPaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider, ownerConfirmContract } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -62,23 +62,33 @@ export default function OwnerDashboard() {
     loadData()
   }
 
+  const [lastPwd, setLastPwd] = useState('')
+
   const handleRegisterRider = async () => {
     if (!regForm.name) {
       setToast({ show: true, msg: '⚠️ Rider name is required' })
       setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       return
     }
-    await createUser({ ...regForm, createdBy: user.id })
+    const result = await createUser({ ...regForm, createdBy: user.id })
+    setLastPwd(result.defaultPwd)
     setShowRegister(false)
     setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha' })
-    setToast({ show: true, msg: `✅ Rider ${regForm.name} registered!` })
+    setToast({ show: true, msg: `✅ Rider ${regForm.name} registered! Password: ${result.defaultPwd}` })
+    setTimeout(() => setToast({ show: false, msg: '' }), 4000)
+    loadData()
+  }
+
+  const handleOwnerConfirm = async (contractId) => {
+    await ownerConfirmContract(contractId)
+    setToast({ show: true, msg: `✅ Contract #${contractId} confirmed & active!` })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
     loadData()
   }
 
-  const totalPaid = payments.filter(p => p.status === 'completed' || p.status === 'confirmed').reduce((s, p) => s + p.amount, 0)
-  const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'overdue').reduce((s, p) => s + p.amount, 0)
-  const activeContracts = contracts.filter(c => c.status === 'active').length
+  const totalPaid = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)
+  const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'missed').reduce((s, p) => s + p.amount, 0)
+  const activeContracts = contracts.filter(c => c.status === 'Active').length
 
   const title = tab === 'overview' ? `Owner Dashboard` :
     tab === 'riders' ? 'My Riders' :
@@ -242,14 +252,20 @@ export default function OwnerDashboard() {
             <div className="page-sub">All agreements with your riders</div>
             <div className="card">
               <DataTable
-                columns={['#', 'Rider', 'Motorcycle', 'Type', 'Total', 'Status']}
+                columns={['#', 'Rider', 'Motorcycle', 'Type', 'Total', 'Status', 'Action']}
                 rows={contracts.map((c, i) => [
                   `#${c.contractId}`,
                   c.riderName,
                   c.motorcycle,
                   c.paymentType,
                   `TSh ${c.totalAmount.toLocaleString()}`,
-                  <Badge status={c.status} />
+                  <Badge status={c.status} />,
+                  c.status === 'Accepted' ? (
+                    <button className="nav-btn" style={{ background: 'var(--green-bg)', color: 'var(--green)' }}
+                            onClick={() => handleOwnerConfirm(c.contractId)}>Confirm</button>
+                  ) : c.status === 'Pending' ? (
+                    <span className="text-muted" style={{ fontSize: 11 }}>Awaiting rider</span>
+                  ) : '—'
                 ])}
               />
               {contracts.length === 0 && <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No contracts yet.</p>}

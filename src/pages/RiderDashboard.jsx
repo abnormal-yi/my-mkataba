@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment } from '../data/db'
+import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -17,8 +17,10 @@ export default function RiderDashboard() {
   const [payments, setPayments] = useState([])
   const [notifications, setNotifications] = useState([])
   const [toast, setToast] = useState({ show: false, msg: '' })
+  const [step, setStep] = useState('') // '' | 'accept' | 'changepwd' | 'done'
 
   useEffect(() => { loadData() }, [user])
+
   const loadData = async () => {
     if (!user) return
     const c = await getContractForRider(user.id)
@@ -27,7 +29,47 @@ export default function RiderDashboard() {
     setPayments(p)
     const n = await getNotificationsForUser(user.id)
     setNotifications(n)
+
+    if (user.firstLogin && c && (c.status === 'Pending' || c.status === 'Accepted')) {
+      setStep('accept')
+    } else if (user.firstLogin && c && c.status === 'Accepted') {
+      setStep('changepwd')
+    } else {
+      setStep('done')
+    }
   }
+
+  const handleAcceptContract = async () => {
+    if (!contract) return
+    await acceptContract(contract.contractId, user.id)
+    setToast({ show: true, msg: '✅ Contract accepted! Now set your new password.' })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    setStep('changepwd')
+  }
+
+  const handleRejectContract = async () => {
+    if (!contract) return
+    await rejectContract(contract.contractId, user.id)
+    setToast({ show: true, msg: '⛔ Contract rejected. Owner notified.' })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    setStep('done')
+    logout()
+  }
+
+  const handleChangePassword = async () => {
+    if (!newPwd || newPwd.length < 4) {
+      setToast({ show: true, msg: '⚠️ Password must be at least 4 characters' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      return
+    }
+    await changePassword(user.id, newPwd)
+    setToast({ show: true, msg: '✅ Password changed! Welcome to My Mkataba 🎉' })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    setStep('done')
+    setNewPwd('')
+  }
+
+  const [newPwd, setNewPwd] = useState('')
 
   const handlePay = async () => {
     await makePayment(user.id)
@@ -45,6 +87,73 @@ export default function RiderDashboard() {
     tab === 'contract' ? 'My Contract' :
     tab === 'payments' ? 'Payment History' :
     tab === 'notifications' ? 'Notifications' : 'My Profile'
+
+  if (step === 'accept') {
+    return (
+      <div className="app" style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 500, width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>📄</div>
+            <h2 style={{ fontSize: 24 }}>New Contract Available</h2>
+            <p className="text-muted">Review and accept your contract to start</p>
+          </div>
+          <div className="card" style={{ border: '2px solid var(--purple)' }}>
+            <div className="card-title flex-between">
+              Contract #{contract?.contractId}
+              <Badge status="purple" label={contract?.paymentType} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Owner</p><p className="fw700">{contract?.ownerName}</p></div>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Rider</p><p className="fw700">{contract?.riderName}</p></div>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Motorcycle</p><p className="fw700">{contract?.motorcycle}</p></div>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Payment</p><p className="fw700">TSh {contract?.dailyAmount?.toLocaleString()}/{contract?.paymentType?.toLowerCase()}</p></div>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Total Amount</p><p className="fw700">TSh {contract?.totalAmount?.toLocaleString()}</p></div>
+              <div><p className="text-muted" style={{ fontSize: 12 }}>Duration</p><p className="fw700">{contract?.startDate} – {contract?.endDate}</p></div>
+            </div>
+            <div style={{ background: '#F8F7FF', borderRadius: 10, padding: 16, fontSize: 13, lineHeight: 1.7, color: 'var(--muted)', marginBottom: 16 }}>
+              {contract?.agreementText || 'Standard Boda Boda contract agreement.'}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="btn-primary" style={{ flex: 1, background: 'var(--green)' }} onClick={handleAcceptContract}>
+                ✅ Accept Contract
+              </button>
+              <button className="btn-primary" style={{ flex: 1, background: 'var(--red)' }} onClick={handleRejectContract}>
+                ✕ Reject
+              </button>
+            </div>
+          </div>
+        </div>
+        <Toast visible={toast.show} message={toast.msg} />
+      </div>
+    )
+  }
+
+  if (step === 'changepwd') {
+    return (
+      <div className="app" style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 400, width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 56, marginBottom: 8 }}>🔐</div>
+            <h2 style={{ fontSize: 24 }}>Change Your Password</h2>
+            <p className="text-muted">Set a new password to secure your account</p>
+          </div>
+          <div className="card">
+            <label>Default Password</label>
+            <input type="text" value="1234" disabled style={{ background: '#f5f5f5' }} />
+            <label>New Password</label>
+            <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Min 4 characters" />
+            <button className="btn-primary" style={{ background: 'var(--green)' }} onClick={handleChangePassword}>
+              ✅ Save & Continue
+            </button>
+          </div>
+          <p className="text-muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 12 }}>
+            Owner has been notified to confirm the contract.
+          </p>
+        </div>
+        <Toast visible={toast.show} message={toast.msg} />
+      </div>
+    )
+  }
 
   const tabContent = () => {
     switch (tab) {
@@ -64,7 +173,7 @@ export default function RiderDashboard() {
             {contract && (
               <>
                 <div className="card">
-                  <div className="card-title">Payment Progress <Badge status="purple">Daily – TSh {contract.dailyAmount.toLocaleString()}/day</Badge></div>
+                  <div className="card-title">Payment Progress <Badge status="purple">{contract.paymentType} – TSh {contract.dailyAmount.toLocaleString()}/{contract.paymentType?.toLowerCase()}</Badge></div>
                   <div className="flex-between mb16">
                     <span className="text-muted">Paid: <strong className="text-green">TSh {contract.paidAmount.toLocaleString()}</strong></span>
                     <span className="text-muted">Remaining: <strong className="text-red">TSh {balance.toLocaleString()}</strong></span>
@@ -146,7 +255,7 @@ export default function RiderDashboard() {
                 rows={payments.map(p => [
                   p.date,
                   `TSh ${p.amount.toLocaleString()}`,
-                  p.method,
+                  p.method || 'M-Pesa',
                   <Badge status={p.status} />
                 ])}
               />

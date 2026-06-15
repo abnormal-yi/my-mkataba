@@ -55,8 +55,8 @@ export default function Layout({ children, activeTab, onTabChange, role, onLogou
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         <span className="brand">My <span>Mkataba</span></span>
-        <button className="nav-btn" onClick={handleLogout} style={{ marginLeft: 'auto' }}>
-          <LogOut size={14} style={{ marginRight: 4 }} /> Sign Out
+        <button className="nav-btn" onClick={handleLogout} style={{ marginLeft: 'auto', fontSize: 0, gap: 0 }}>
+          <LogOut size={18} />
         </button>
       </nav>
       <div className="dashboard-layout">
