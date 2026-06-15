@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Logo from '../components/Logo'
 
 export default function LoginPage() {
   const { currentRole, login } = useAuth()
@@ -34,8 +35,8 @@ export default function LoginPage() {
   return (
     <div className="login-screen">
       <div className="login-box">
-        <div className="logo-mini">
-          <div className="logo-mini-icon">M</div>
+        <div className="logo-mini" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <Logo size={42} />
           <div className="name">My <span>Mkataba</span></div>
         </div>
         <div className="role-badge">{labels[currentRole]}</div>

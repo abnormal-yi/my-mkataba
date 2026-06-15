@@ -14,25 +14,26 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const userData = await getUserByEmail(email)
-    if (userData && (!password || password === '1234')) {
-      setUser(userData)
-      setCurrentRole(userData.role)
-      return { success: true }
-    }
-    if (!userData) {
-      const users = {
-        rider: { email: 'john@mkataba.tz', name: 'John Msumi' },
-        owner: { email: 'hassan@mkataba.tz', name: 'Hassan Mwangi' },
-        admin: { email: 'admin@mkataba.tz', name: 'Super Creator' },
+    if (userData) {
+      if (userData.password === password) {
+        setUser(userData)
+        setCurrentRole(userData.role)
+        return { success: true }
       }
-      const u = users[currentRole]
-      if (u) {
-        const userData = await getUserByEmail(u.email)
-        if (userData) {
-          setUser(userData)
-          setCurrentRole(userData.role)
-          return { success: true }
-        }
+      return { success: false, error: 'Invalid email or password' }
+    }
+    const users = {
+      rider: { email: 'john@mkataba.tz', name: 'John Msumi' },
+      owner: { email: 'hassan@mkataba.tz', name: 'Hassan Mwangi' },
+      admin: { email: 'admin@mkataba.tz', name: 'Super Creator' },
+    }
+    const u = users[currentRole]
+    if (u) {
+      const fallback = await getUserByEmail(u.email)
+      if (fallback) {
+        setUser(fallback)
+        setCurrentRole(fallback.role)
+        return { success: true }
       }
     }
     return { success: false, error: 'Invalid email or password' }

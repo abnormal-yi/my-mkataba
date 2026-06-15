@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LayoutDashboard, FileText, CreditCard, Bell, User, Menu, X, LogOut, Users, MapPin, Settings } from 'lucide-react'
+import Logo from './Logo'
 
 const roleConfig = {
   rider: {
@@ -54,7 +55,9 @@ export default function Layout({ children, activeTab, onTabChange, role, onLogou
         <button className="hamburger-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        <span className="brand">My <span>Mkataba</span></span>
+        <span className="brand" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => navigate('/')}>
+          <Logo size={26} /> My <span>Mkataba</span>
+        </span>
         <button className="nav-btn" onClick={handleLogout} style={{ marginLeft: 'auto', fontSize: 0, gap: 0 }}>
           <LogOut size={18} />
         </button>
@@ -62,8 +65,8 @@ export default function Layout({ children, activeTab, onTabChange, role, onLogou
       <div className="dashboard-layout">
         <div className={`sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
         <aside className={`sidebar${sidebarOpen ? ' open' : ''}`}>
-          <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, background: '#fff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--purple-dark)', fontWeight: 800, fontSize: 16 }}>M</div>
+          <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => navigate('/')}>
+            <Logo size={36} />
             <div>
               <div className="s-name">My <span>Mkataba</span></div>
               <div className="s-role">{config.role}</div>

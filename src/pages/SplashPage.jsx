@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Logo from '../components/Logo'
 
 export default function SplashPage() {
   const { setRole } = useAuth()
@@ -13,7 +14,7 @@ export default function SplashPage() {
   return (
     <div id="screen-splash" className="screen active">
       <nav className="app-nav">
-        <span className="brand">My <span>Mkataba</span></span>
+        <span className="brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Logo size={26} /> My <span>Mkataba</span></span>
       </nav>
       <div style={{ paddingTop: 'var(--nav-h)' }}>
         <div style={{
@@ -22,10 +23,7 @@ export default function SplashPage() {
           textAlign: 'center', color: '#fff', padding: '60px 24px', minHeight: 'calc(100vh - var(--nav-h))'
         }}>
           <div className="splash-logo">
-            <svg viewBox="0 0 80 80" fill="none">
-              <rect width="80" height="80" rx="20" fill="#6C3FC5"/>
-              <text x="40" y="52" textAnchor="middle" fill="white" fontSize="36" fontWeight="800" fontFamily="Poppins, sans-serif">M</text>
-            </svg>
+            <Logo size={100} />
           </div>
           <h1 className="splash-title">My <span>Mkataba</span></h1>
           <p className="splash-sub">Boda Boda Contracts &amp; Payments</p>
