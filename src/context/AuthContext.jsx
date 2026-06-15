@@ -23,14 +23,14 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Invalid email or password' }
     }
     const users = {
-      rider: { email: 'john@mkataba.tz', name: 'John Msumi' },
-      owner: { email: 'hassan@mkataba.tz', name: 'Hassan Mwangi' },
-      admin: { email: 'admin@mkataba.tz', name: 'Super Creator' },
+      rider: { email: 'john@mkataba.tz' },
+      owner: { email: 'hassan@mkataba.tz' },
+      admin: { email: 'admin@mkataba.tz' },
     }
-    const u = users[currentRole]
-    if (u) {
-      const fallback = await getUserByEmail(u.email)
-      if (fallback) {
+    const defaultAccount = users[currentRole]
+    if (defaultAccount) {
+      const fallback = await getUserByEmail(defaultAccount.email)
+      if (fallback && fallback.password === password) {
         setUser(fallback)
         setCurrentRole(fallback.role)
         return { success: true }
