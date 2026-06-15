@@ -2,6 +2,7 @@
   "name": "my-mkataba",
   "private": true,
   "version": "1.0.0",
+  "description": "Digital contract & payment management for Boda Boda owners and riders in Tanzania. Offline-first mobile app with multi-role dashboards, M-Pesa integration, and real-time notifications.",
   "type": "module",
   "scripts": {
     "dev": "vite",
