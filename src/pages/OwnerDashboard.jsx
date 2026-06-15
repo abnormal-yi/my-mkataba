@@ -20,7 +20,7 @@ export default function OwnerDashboard() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ riderId: '', dailyAmount: 1500, totalAmount: 135000, paymentType: 'Daily', motorcycle: 'Boxer 150', startDate: '', endDate: '' })
   const [showRegister, setShowRegister] = useState(false)
-  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha' })
+  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
 
   const loadData = async () => {
     if (!user) return
@@ -70,11 +70,25 @@ export default function OwnerDashboard() {
       setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       return
     }
-    const result = await createUser({ ...regForm, createdBy: user.id })
+    const result = await createUser({ name: regForm.name, phone: regForm.phone, email: regForm.email, nationalId: regForm.nationalId, region: regForm.region, createdBy: user.id })
+    if (regForm.startDate && regForm.endDate) {
+      await createContract({
+        riderId: result.id,
+        ownerId: user.id,
+        ownerName: user.name,
+        riderName: regForm.name,
+        motorcycle: regForm.motorcycle,
+        paymentType: regForm.paymentType,
+        dailyAmount: regForm.dailyAmount,
+        totalAmount: regForm.totalAmount,
+        startDate: regForm.startDate,
+        endDate: regForm.endDate,
+      })
+    }
     setLastPwd(result.defaultPwd)
     setShowRegister(false)
-    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha' })
-    setToast({ show: true, msg: `✅ Rider ${regForm.name} registered! Password: ${result.defaultPwd}` })
+    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+    setToast({ show: true, msg: `✅ Rider ${regForm.name} registered with contract! Password: ${result.defaultPwd}` })
     setTimeout(() => setToast({ show: false, msg: '' }), 4000)
     loadData()
   }
@@ -138,7 +152,8 @@ export default function OwnerDashboard() {
             </div>
             {showRegister && (
               <div className="card" style={{ marginBottom: 20, border: '2px solid var(--green)' }}>
-                <div className="card-title">Register New Rider</div>
+                <div className="card-title">Register New Rider + Create Contract</div>
+                <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Rider Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label>Full Name *</label>
@@ -169,8 +184,44 @@ export default function OwnerDashboard() {
                     </select>
                   </div>
                 </div>
+                <hr style={{ margin: '16px 0', borderColor: 'var(--border)' }} />
+                <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Contract Details</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label>Motorcycle</label>
+                    <select value={regForm.motorcycle} onChange={e => setRegForm({ ...regForm, motorcycle: e.target.value })}>
+                      <option>Boxer 150</option>
+                      <option>Hero Splendor</option>
+                      <option>TVS HLX</option>
+                      <option>Bajaj</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Payment Type</label>
+                    <select value={regForm.paymentType} onChange={e => setRegForm({ ...regForm, paymentType: e.target.value })}>
+                      <option>Daily</option>
+                      <option>Weekly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Daily/Weekly Amount (TSh)</label>
+                    <input type="number" value={regForm.dailyAmount} onChange={e => setRegForm({ ...regForm, dailyAmount: +e.target.value })} />
+                  </div>
+                  <div>
+                    <label>Total Amount (TSh)</label>
+                    <input type="number" value={regForm.totalAmount} onChange={e => setRegForm({ ...regForm, totalAmount: +e.target.value })} />
+                  </div>
+                  <div>
+                    <label>Start Date</label>
+                    <input type="date" value={regForm.startDate} onChange={e => setRegForm({ ...regForm, startDate: e.target.value })} />
+                  </div>
+                  <div>
+                    <label>End Date</label>
+                    <input type="date" value={regForm.endDate} onChange={e => setRegForm({ ...regForm, endDate: e.target.value })} />
+                  </div>
+                </div>
                 <button className="btn-primary" style={{ marginTop: 16, background: 'var(--green)' }} onClick={handleRegisterRider}>
-                  ✅ Register Rider
+                  ✅ Register & Create Contract
                 </button>
               </div>
             )}
