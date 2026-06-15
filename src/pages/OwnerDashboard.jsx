@@ -20,6 +20,8 @@ export default function OwnerDashboard() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ riderId: '', dailyAmount: 1500, totalAmount: 135000, paymentType: 'Daily', motorcycle: 'Boxer 150', startDate: '', endDate: '' })
   const [showRegister, setShowRegister] = useState(false)
+  const [showCredsModal, setShowCredsModal] = useState(false)
+  const [lastCredentials, setLastCredentials] = useState({ name: '', email: '', password: '' })
   const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
 
   const loadData = async () => {
@@ -88,8 +90,8 @@ export default function OwnerDashboard() {
     setLastPwd(result.defaultPwd)
     setShowRegister(false)
     setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
-    setToast({ show: true, msg: `✅ Rider ${regForm.name} registered with contract! Password: ${result.defaultPwd}` })
-    setTimeout(() => setToast({ show: false, msg: '' }), 4000)
+    setLastCredentials({ name: regForm.name, email: regForm.email || `${regForm.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`, password: result.defaultPwd })
+    setShowCredsModal(true)
     loadData()
   }
 
@@ -374,6 +376,25 @@ export default function OwnerDashboard() {
     <Layout role="owner" activeTab={tab} onTabChange={setTab} onLogout={logout}>
       {tabContent()}
       <Toast visible={toast.show} message={toast.msg} />
+      {showCredsModal && (
+        <div className="modal-overlay" onClick={() => setShowCredsModal(false)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-icon">🎉</div>
+            <div className="modal-title">Rider Registered!</div>
+            <div className="modal-body">
+              <p style={{ margin: '0 0 12px' }}>Give these credentials to the rider:</p>
+              <div className="creds-box">
+                <div className="creds-row"><span className="creds-label">Name:</span><span className="creds-value">{lastCredentials.name}</span></div>
+                <div className="creds-row"><span className="creds-label">Email:</span><span className="creds-value">{lastCredentials.email}</span></div>
+                <div className="creds-row"><span className="creds-label">Password:</span><span className="creds-value creds-pwd">{lastCredentials.password}</span></div>
+              </div>
+              <button className="btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setShowCredsModal(false)}>
+                ✓ Nimeona (Got it)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
