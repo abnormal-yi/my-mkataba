@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword } from '../data/db'
+import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -71,6 +71,19 @@ export default function RiderDashboard() {
   }
 
   const [newPwd, setNewPwd] = useState('')
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '', nationalId: '' })
+
+  useEffect(() => {
+    if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', nationalId: user.nationalId || '' })
+  }, [user])
+
+  const handleSaveProfile = async () => {
+    await updateUser(user.id, profileForm)
+    updateUser(profileForm)
+    setToast({ show: true, msg: '✅ Profile updated!' })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
+  }
 
   const handlePay = async () => {
     await makePayment(user.id)
@@ -302,17 +315,14 @@ export default function RiderDashboard() {
                 </div>
               </div>
               <label>Full Name</label>
-              <input type="text" defaultValue={user?.name} />
+              <input type="text" value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} />
               <label>Phone Number</label>
-              <input type="text" defaultValue={user?.phone || '+255 7XX XXX XXX'} />
+              <input type="text" value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="+255 7XX XXX XXX" />
               <label>Email</label>
-              <input type="email" defaultValue={user?.email} />
+              <input type="email" value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} />
               <label>National ID</label>
-              <input type="text" defaultValue={user?.nationalId || '19XXXXXXXXXXXXXX'} />
-              <button className="btn-primary" onClick={() => {
-                setToast({ show: true, msg: '✅ Profile updated!' })
-                setTimeout(() => setToast({ show: false, msg: '' }), 3000)
-              }}>Save Changes</button>
+              <input type="text" value={profileForm.nationalId} onChange={e => setProfileForm({ ...profileForm, nationalId: e.target.value })} placeholder="19XXXXXXXXXXXXXX" />
+              <button className="btn-primary" onClick={handleSaveProfile}>Save Changes</button>
             </div>
           </>
         )
