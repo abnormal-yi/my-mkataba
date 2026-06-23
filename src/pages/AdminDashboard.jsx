@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase } from '../data/db'
+import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase, deleteRider } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState([])
   const [notifications, setNotifications] = useState([])
   const [toast, setToast] = useState({ show: false, msg: '' })
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const loadData = async () => {
     if (!user) return
@@ -38,6 +39,14 @@ export default function AdminDashboard() {
   const handleResolve = async (contractId) => {
     await updateContractStatus(contractId, 'completed')
     setToast({ show: true, msg: `✅ Contract #${contractId} resolved` })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
+  }
+
+  const handleDeleteRider = async (userId) => {
+    await deleteRider(userId)
+    setConfirmDelete(null)
+    setToast({ show: true, msg: `🗑️ Rider deleted permanently!` })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
     loadData()
   }
@@ -95,7 +104,13 @@ export default function AdminDashboard() {
                   u.phone || '—',
                   <Badge status={u.role === 'admin' ? 'danger' : u.role === 'owner' ? 'purple' : 'green'} label={u.role} />,
                   <Badge status={u.status || 'active'} />,
-                  <button className="nav-btn" style={{ background: 'var(--red-bg)', color: 'var(--red)' }} onClick={() => handleBlockUser(u.id)}>Block</button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="nav-btn" style={{ background: 'var(--red-bg)', color: 'var(--red)' }} onClick={() => handleBlockUser(u.id)}>Block</button>
+                    {u.role === 'rider' && (
+                      <button className="nav-btn" style={{ background: '#FEE2E2', color: '#DC2626' }}
+                              onClick={() => setConfirmDelete(u)}>Delete</button>
+                    )}
+                  </div>
                 ])}
               />
               {users.length === 0 && <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No users.</p>}
@@ -198,6 +213,31 @@ export default function AdminDashboard() {
     <Layout role="admin" activeTab={tab} onTabChange={setTab} onLogout={logout}>
       {tabContent()}
       <Toast visible={toast.show} message={toast.msg} />
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <div className="modal-icon">⚠️</div>
+            <div className="modal-title">Delete Rider?</div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 16 }}>
+                Una uhakika unataka kumfuta <strong>{confirmDelete.name}</strong>?
+                Hatua hii itafuta rider, mkataba wake, malipo yote, na data zake.
+                Haiwezi kutenduliwa.
+              </p>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button className="btn-primary" style={{ background: 'var(--red)', flex: 1 }}
+                        onClick={() => handleDeleteRider(confirmDelete.id)}>
+                  🗑️ Delete
+                </button>
+                <button className="btn-primary" style={{ background: 'transparent', color: 'var(--muted)', boxShadow: 'none', flex: 1 }}
+                        onClick={() => setConfirmDelete(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
