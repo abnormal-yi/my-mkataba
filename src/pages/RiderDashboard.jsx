@@ -308,6 +308,7 @@ export default function RiderDashboard() {
               </div>
             )}
           </>
+        )
 
       case 'contract':
         return (
