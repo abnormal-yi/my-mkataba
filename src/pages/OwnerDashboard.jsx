@@ -22,7 +22,7 @@ export default function OwnerDashboard() {
   const [showRegister, setShowRegister] = useState(false)
   const [showCredsModal, setShowCredsModal] = useState(false)
   const [lastCredentials, setLastCredentials] = useState({ name: '', email: '', password: '' })
-  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', plateNumber: '', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
   const [riderLocations, setRiderLocations] = useState([])
   const [mapRider, setMapRider] = useState(null)
 
@@ -94,12 +94,13 @@ export default function OwnerDashboard() {
     }
     const result = await createUser({ name: regForm.name, phone: regForm.phone, email: regForm.email, nationalId: regForm.nationalId, region: regForm.region, createdBy: user.id })
     if (regForm.startDate && regForm.endDate) {
+      const plate = regForm.plateNumber || `${regForm.motorcycle.toUpperCase().slice(0,3)} ${100 + result.id}`
       await createContract({
         riderId: result.id,
         ownerId: user.id,
         ownerName: user.name,
         riderName: regForm.name,
-        motorcycle: regForm.motorcycle,
+        motorcycle: plate,
         paymentType: regForm.paymentType,
         dailyAmount: regForm.dailyAmount,
         totalAmount: regForm.totalAmount,
@@ -109,7 +110,7 @@ export default function OwnerDashboard() {
     }
     setLastPwd(result.defaultPwd)
     setShowRegister(false)
-    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', plateNumber: '', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
     setLastCredentials({ name: regForm.name, email: regForm.email || `${regForm.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`, password: result.defaultPwd })
     setShowCredsModal(true)
     loadData()
@@ -211,13 +212,17 @@ export default function OwnerDashboard() {
                 <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Contract Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label>Motorcycle</label>
+                    <label>Motorcycle Model</label>
                     <select value={regForm.motorcycle} onChange={e => setRegForm({ ...regForm, motorcycle: e.target.value })}>
                       <option>Boxer 150</option>
                       <option>Hero Splendor</option>
                       <option>TVS HLX</option>
                       <option>Bajaj</option>
                     </select>
+                  </div>
+                  <div>
+                    <label>Plate Number</label>
+                    <input type="text" value={regForm.plateNumber} onChange={e => setRegForm({ ...regForm, plateNumber: e.target.value.toUpperCase() })} placeholder="e.g. T 245 ABZ" />
                   </div>
                   <div>
                     <label>Payment Type</label>

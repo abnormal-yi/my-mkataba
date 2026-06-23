@@ -92,21 +92,27 @@ export default function RiderDashboard() {
   const handleShareLocation = () => {
     if (!navigator.geolocation) {
       setToast({ show: true, msg: '⚠️ GPS haipo kwenye kifaa hiki' })
-      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      setTimeout(() => setToast({ show: false, msg: '' }), 4000)
       return
     }
+    setToast({ show: true, msg: '📍 Inatafuta location...' })
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         await saveLocation(user.id, user.name, pos.coords.latitude, pos.coords.longitude)
         setLastShared(new Date().toLocaleTimeString())
-        setToast({ show: true, msg: '✅ Location shared successfully!' })
+        setToast({ show: true, msg: '✅ Location imesharewa!' })
         setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       },
-      () => {
-        setToast({ show: true, msg: '⚠️ Unable to get location. Check GPS settings.' })
-        setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      (err) => {
+        const msgs = {
+          1: '⚠️ Umekataa ruhusa ya GPS. Washa location kwenye mipangilio.',
+          2: '⚠️ GPS haipatikani. Angalia kama location imewashwa.',
+          3: '⚠️ GPS timeout. Jaribu tena mahali wazi.',
+        }
+        setToast({ show: true, msg: msgs[err.code] || '⚠️ GPS error. Jaribu tena.' })
+        setTimeout(() => setToast({ show: false, msg: '' }), 5000)
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     )
   }
 
