@@ -8,6 +8,7 @@ db.version(1).stores({
   payments: '++id, contractId, riderId, ownerId, date, amount, method, status',
   notifications: '++id, userId, type, title, desc, time, read',
   settings: '++id, key',
+  locations: '++id, riderId, riderName, lat, lng, timestamp',
 })
 
 export async function seedDatabase() {
@@ -187,13 +188,16 @@ export async function createContract(data) {
   return contract
 }
 
-export async function makePayment(riderId) {
+export async function makePayment(riderId, customAmount) {
   const contract = await db.contracts.where('riderId').equals(riderId).first()
   if (!contract) return null
-  const newPaid = contract.paidAmount + contract.dailyAmount
+  const amount = customAmount || contract.dailyAmount
+  const newPaid = contract.paidAmount + amount
   const today = new Date()
   const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const status = newPaid >= contract.totalAmount ? 'paid' : 'paid'
+
+  const isShort = amount < contract.dailyAmount
+  const status = isShort ? 'partial' : 'paid'
 
   await db.contracts.update(contract.id, {
     paidAmount: newPaid,
@@ -206,20 +210,73 @@ export async function makePayment(riderId) {
     riderName: contract.riderName,
     ownerName: contract.ownerName,
     date: dateStr,
-    amount: contract.dailyAmount,
+    amount,
     method: 'M-Pesa',
-    status: 'paid',
+    status,
   }
   await db.payments.add(payment)
 
-  await db.notifications.add({
-    userId: riderId, type: 'paid',
-    title: `Payment Confirmed – ${dateStr}`,
-    desc: `Your payment of TSh ${contract.dailyAmount.toLocaleString()} was received. Thank you!`,
-    time: 'Just now', read: false,
-  })
+  // Rider notification
+  if (isShort) {
+    const shortAmount = contract.dailyAmount - amount
+    await db.notifications.add({
+      userId: riderId, type: 'missed',
+      title: `Partial Payment — ${dateStr}`,
+      desc: `Umefaulu kulipa TSh ${amount.toLocaleString()} kwa siku ya leo. Kiasi pungufu TSh ${shortAmount.toLocaleString()}.`,
+      time: 'Just now', read: false,
+    })
+    await db.notifications.add({
+      userId: contract.ownerId, type: 'missed',
+      title: `Partial Payment from ${contract.riderName}`,
+      desc: `${contract.riderName} amelipa TSh ${amount.toLocaleString()} (pungufu). Anadaiwa TSh ${shortAmount.toLocaleString()}.`,
+      time: 'Just now', read: false,
+    })
+  } else {
+    await db.notifications.add({
+      userId: riderId, type: 'paid',
+      title: `Payment Confirmed – ${dateStr}`,
+      desc: `Your payment of TSh ${amount.toLocaleString()} was received. Thank you!`,
+      time: 'Just now', read: false,
+    })
+  }
 
   return payment
+}
+
+export async function saveLocation(riderId, riderName, lat, lng) {
+  const location = {
+    riderId, riderName, lat, lng,
+    timestamp: new Date().toISOString(),
+  }
+  await db.locations.add(location)
+  return location
+}
+
+export async function getLastLocation(riderId) {
+  return db.locations.where('riderId').equals(riderId).reverse().first()
+}
+
+export async function getAllLastLocations() {
+  const all = await db.locations.toArray()
+  const seen = {}
+  all.forEach(loc => {
+    if (!seen[loc.riderId] || loc.timestamp > seen[loc.riderId].timestamp) {
+      seen[loc.riderId] = loc
+    }
+  })
+  return Object.values(seen)
+}
+
+export async function deleteRider(riderId) {
+  await db.users.where('id').equals(riderId).delete()
+  await db.contracts.where('riderId').equals(riderId).delete()
+  await db.payments.where('riderId').equals(riderId).delete()
+  await db.notifications.where('userId').equals(riderId).delete()
+  await db.locations.where('riderId').equals(riderId).delete()
+}
+
+export async function getPaymentsForRiderById(riderId) {
+  return db.payments.where('riderId').equals(riderId).reverse().sortBy('id')
 }
 
 export async function blockRider(riderId) {
@@ -292,6 +349,7 @@ export async function resetDatabase() {
     payments: '++id, contractId, riderId, ownerId, date, amount, method, status',
     notifications: '++id, userId, type, title, desc, time, read',
     settings: '++id, key',
+    locations: '++id, riderId, riderName, lat, lng, timestamp',
   })
   await seedDatabase()
 }
