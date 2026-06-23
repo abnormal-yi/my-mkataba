@@ -11,6 +11,7 @@ const roleConfig = {
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'contract', label: 'My Contract', icon: FileText },
       { key: 'payments', label: 'Payments', icon: CreditCard },
+      { key: 'location', label: 'Location', icon: MapPin },
       { key: 'notifications', label: 'Notifications', icon: Bell },
       { key: 'profile', label: 'Profile', icon: User },
     ]

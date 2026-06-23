@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser } from '../data/db'
+import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser, saveLocation, getLastLocation } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -17,9 +17,18 @@ export default function RiderDashboard() {
   const [payments, setPayments] = useState([])
   const [notifications, setNotifications] = useState([])
   const [toast, setToast] = useState({ show: false, msg: '' })
+  const [lastShared, setLastShared] = useState('')
   const [step, setStep] = useState('') // '' | 'accept' | 'changepwd' | 'done'
 
   useEffect(() => { loadData() }, [user])
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return
+      const last = await getLastLocation(user.id)
+      if (last) setLastShared(new Date(last.timestamp).toLocaleTimeString())
+    })()
+  }, [user])
 
   const loadData = async () => {
     if (!user) return
@@ -79,6 +88,27 @@ export default function RiderDashboard() {
     if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', nationalId: user.nationalId || '' })
   }, [user])
 
+  const handleShareLocation = () => {
+    if (!navigator.geolocation) {
+      setToast({ show: true, msg: '⚠️ GPS haipo kwenye kifaa hiki' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        await saveLocation(user.id, user.name, pos.coords.latitude, pos.coords.longitude)
+        setLastShared(new Date().toLocaleTimeString())
+        setToast({ show: true, msg: '✅ Location shared successfully!' })
+        setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      },
+      () => {
+        setToast({ show: true, msg: '⚠️ Unable to get location. Check GPS settings.' })
+        setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
   const handleSaveProfile = async () => {
     await updateUser(user.id, profileForm)
     updateUser(profileForm)
@@ -122,6 +152,7 @@ export default function RiderDashboard() {
   const title = tab === 'overview' ? `Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'}, ${user?.name?.split(' ')[0]} 👋` :
     tab === 'contract' ? 'My Contract' :
     tab === 'payments' ? 'Payment History' :
+    tab === 'location' ? 'Share Location' :
     tab === 'notifications' ? 'Notifications' : 'My Profile'
 
   if (step === 'accept') {
@@ -339,6 +370,28 @@ export default function RiderDashboard() {
                   <NotificationItem key={n.id || i} item={n} />
                 ))}
               </ul>
+            </div>
+          </>
+        )
+
+      case 'location':
+        return (
+          <>
+            <div className="page-title">Share Location</div>
+            <div className="page-sub">Let your owner know where you are</div>
+            <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📍</div>
+              <p style={{ marginBottom: 20, color: 'var(--muted)' }}>
+                Press the button below to share your current location with your owner.
+              </p>
+              <button className="btn-primary" style={{ background: 'var(--purple)' }} onClick={handleShareLocation}>
+                📍 Share My Location
+              </button>
+              {lastShared && (
+                <p style={{ color: 'var(--green)', fontSize: 12, marginTop: 12 }}>
+                  ✓ Last shared: {lastShared}
+                </p>
+              )}
             </div>
           </>
         )
