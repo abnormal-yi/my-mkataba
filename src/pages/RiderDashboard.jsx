@@ -71,6 +71,8 @@ export default function RiderDashboard() {
   }
 
   const [newPwd, setNewPwd] = useState('')
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payAmount, setPayAmount] = useState(contract?.dailyAmount || 1500)
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '', nationalId: '' })
 
   useEffect(() => {
@@ -86,9 +88,24 @@ export default function RiderDashboard() {
   }
 
   const handlePay = async () => {
-    await makePayment(user.id)
-    setToast({ show: true, msg: '✅ Payment of TSh 1,500 sent via M-Pesa!' })
+    if (!payAmount || payAmount < 100) {
+      setToast({ show: true, msg: '⚠️ Kiasi lazima kiwe angalau TSh 100' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      return
+    }
+    const dailyAmount = contract?.dailyAmount || 1500
+    const actualAmount = Math.min(payAmount, dailyAmount)
+    await makePayment(user.id, actualAmount)
+    const isShort = actualAmount < dailyAmount
+    setToast({
+      show: true,
+      msg: isShort
+        ? `✅ Umelipa TSh ${actualAmount.toLocaleString()} (pungufu). Owner amejulishwa.`
+        : `✅ Payment of TSh ${actualAmount.toLocaleString()} sent!`
+    })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    setShowPayModal(false)
+    setPayAmount(dailyAmount)
     loadData()
   }
 
@@ -200,8 +217,8 @@ export default function RiderDashboard() {
                   <ProgressBar value={progress} />
                   <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>{progress}% complete</p>
                 </div>
-                <button className="btn-primary" style={{ marginBottom: 20 }} onClick={handlePay}>
-                  💳 Pay TSh {contract.dailyAmount.toLocaleString()} Now via M-Pesa
+                <button className="btn-primary" style={{ marginBottom: 20 }} onClick={() => { setPayAmount(contract?.dailyAmount || 1500); setShowPayModal(true) }}>
+                  💳 Pay Now via M-Pesa
                 </button>
               </>
             )}
@@ -209,8 +226,35 @@ export default function RiderDashboard() {
               <div className="card-title">June 2026 – Payment Tracker</div>
               <CalendarGrid status={calStatus} />
             </div>
+            {showPayModal && (
+              <div className="modal-overlay" onClick={() => setShowPayModal(false)}>
+                <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
+                  <div className="modal-icon">💳</div>
+                  <div className="modal-title">Make Payment</div>
+                  <div className="modal-body">
+                    <p className="text-muted" style={{ marginBottom: 12 }}>
+                      Daily amount: <strong>TSh {contract?.dailyAmount?.toLocaleString()}</strong>
+                    </p>
+                    <label>Amount to Pay (TSh)</label>
+                    <input type="number" value={payAmount} onChange={e => setPayAmount(Number(e.target.value))}
+                           min={100} max={contract?.dailyAmount || 1500} />
+                    {payAmount < (contract?.dailyAmount || 1500) && (
+                      <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 4 }}>
+                        ⚠️ Utalipa kiasi pungufu. Owner atajulishwa.
+                      </p>
+                    )}
+                    <button className="btn-primary" style={{ background: 'var(--green)', marginTop: 12 }} onClick={handlePay}>
+                      ✅ Pay TSh {payAmount.toLocaleString()}
+                    </button>
+                    <button className="btn-primary" style={{ background: 'transparent', color: 'var(--muted)', boxShadow: 'none', marginTop: 4 }}
+                            onClick={() => setShowPayModal(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
-        )
 
       case 'contract':
         return (
