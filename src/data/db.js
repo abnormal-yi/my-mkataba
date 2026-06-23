@@ -199,48 +199,49 @@ export async function makePayment(riderId, customAmount) {
   const isShort = amount < contract.dailyAmount
   const status = isShort ? 'partial' : 'paid'
 
-  await db.contracts.update(contract.id, {
-    paidAmount: newPaid,
-    status: newPaid >= contract.totalAmount ? 'Completed' : contract.status,
+  await db.transaction('rw', db.contracts, db.payments, db.notifications, async () => {
+    await db.contracts.update(contract.id, {
+      paidAmount: newPaid,
+      status: newPaid >= contract.totalAmount ? 'Completed' : contract.status,
+    })
+
+    const payment = {
+      contractId: contract.contractId,
+      riderId, ownerId: contract.ownerId,
+      riderName: contract.riderName,
+      ownerName: contract.ownerName,
+      date: dateStr,
+      amount,
+      method: 'M-Pesa',
+      status,
+    }
+    await db.payments.add(payment)
+
+    if (isShort) {
+      const shortAmount = contract.dailyAmount - amount
+      await db.notifications.add({
+        userId: riderId, type: 'missed',
+        title: `Partial Payment — ${dateStr}`,
+        desc: `Umefaulu kulipa TSh ${amount.toLocaleString()} kwa siku ya leo. Kiasi pungufu TSh ${shortAmount.toLocaleString()}.`,
+        time: 'Just now', read: false,
+      })
+      await db.notifications.add({
+        userId: contract.ownerId, type: 'missed',
+        title: `Partial Payment from ${contract.riderName}`,
+        desc: `${contract.riderName} amelipa TSh ${amount.toLocaleString()} (pungufu). Anadaiwa TSh ${shortAmount.toLocaleString()}.`,
+        time: 'Just now', read: false,
+      })
+    } else {
+      await db.notifications.add({
+        userId: riderId, type: 'paid',
+        title: `Payment Confirmed – ${dateStr}`,
+        desc: `Your payment of TSh ${amount.toLocaleString()} was received. Thank you!`,
+        time: 'Just now', read: false,
+      })
+    }
   })
 
-  const payment = {
-    contractId: contract.contractId,
-    riderId, ownerId: contract.ownerId,
-    riderName: contract.riderName,
-    ownerName: contract.ownerName,
-    date: dateStr,
-    amount,
-    method: 'M-Pesa',
-    status,
-  }
-  await db.payments.add(payment)
-
-  // Rider notification
-  if (isShort) {
-    const shortAmount = contract.dailyAmount - amount
-    await db.notifications.add({
-      userId: riderId, type: 'missed',
-      title: `Partial Payment — ${dateStr}`,
-      desc: `Umefaulu kulipa TSh ${amount.toLocaleString()} kwa siku ya leo. Kiasi pungufu TSh ${shortAmount.toLocaleString()}.`,
-      time: 'Just now', read: false,
-    })
-    await db.notifications.add({
-      userId: contract.ownerId, type: 'missed',
-      title: `Partial Payment from ${contract.riderName}`,
-      desc: `${contract.riderName} amelipa TSh ${amount.toLocaleString()} (pungufu). Anadaiwa TSh ${shortAmount.toLocaleString()}.`,
-      time: 'Just now', read: false,
-    })
-  } else {
-    await db.notifications.add({
-      userId: riderId, type: 'paid',
-      title: `Payment Confirmed – ${dateStr}`,
-      desc: `Your payment of TSh ${amount.toLocaleString()} was received. Thank you!`,
-      time: 'Just now', read: false,
-    })
-  }
-
-  return payment
+  return { contractId: contract.contractId, amount, status, dateStr }
 }
 
 export async function saveLocation(riderId, riderName, lat, lng) {
@@ -268,15 +269,13 @@ export async function getAllLastLocations() {
 }
 
 export async function deleteRider(riderId) {
-  await db.users.where('id').equals(riderId).delete()
-  await db.contracts.where('riderId').equals(riderId).delete()
-  await db.payments.where('riderId').equals(riderId).delete()
-  await db.notifications.where('userId').equals(riderId).delete()
-  await db.locations.where('riderId').equals(riderId).delete()
-}
-
-export async function getPaymentsForRiderById(riderId) {
-  return db.payments.where('riderId').equals(riderId).reverse().sortBy('id')
+  await db.transaction('rw', db.users, db.contracts, db.payments, db.notifications, db.locations, async () => {
+    await db.users.where('id').equals(riderId).delete()
+    await db.contracts.where('riderId').equals(riderId).delete()
+    await db.payments.where('riderId').equals(riderId).delete()
+    await db.notifications.where('userId').equals(riderId).delete()
+    await db.locations.where('riderId').equals(riderId).delete()
+  })
 }
 
 export async function blockRider(riderId) {
