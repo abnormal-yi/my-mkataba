@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase, deleteRider } from '../data/db'
+import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase, deleteRider, getPaymentsForRider } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -16,6 +16,8 @@ export default function AdminDashboard() {
   const [notifications, setNotifications] = useState([])
   const [toast, setToast] = useState({ show: false, msg: '' })
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [selectedRider, setSelectedRider] = useState(null)
+  const [selectedRiderPayments, setSelectedRiderPayments] = useState([])
 
   const loadData = async () => {
     if (!user) return
@@ -30,6 +32,11 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => { loadData() }, [user])
+
+  useEffect(() => {
+    if (!selectedRider) return
+    getPaymentsForRider(selectedRider.id).then(setSelectedRiderPayments)
+  }, [selectedRider])
 
   const handleBlockUser = async (userId) => {
     setToast({ show: true, msg: `⛔ User ${userId} blocked` })
@@ -59,6 +66,7 @@ export default function AdminDashboard() {
   const title = tab === 'overview' ? 'Admin Overview' :
     tab === 'users' ? 'All Users' :
     tab === 'contracts' ? 'All Contracts' :
+    tab === 'payments' ? 'Rider Payments' :
     tab === 'reports' ? 'Reports' : 'Settings'
 
   const tabContent = () => {
@@ -139,6 +147,68 @@ export default function AdminDashboard() {
             </div>
           </>
         )
+
+      case 'payments': {
+        const riderList = users.filter(u => u.role === 'rider')
+        const currentRider = selectedRider || riderList[0] || null
+        const riderContract = currentRider ? contracts.find(c => c.riderId === currentRider.id) : null
+        const totalPaid = selectedRiderPayments
+          .filter(p => p.status === 'paid' || p.status === 'partial')
+          .reduce((s, p) => s + p.amount, 0)
+
+        return (
+          <>
+            <div className="page-title">Rider Payments</div>
+            <div className="page-sub">View payment history per rider</div>
+
+            <div className="card" style={{ marginBottom: 16 }}>
+              <label>Select Rider</label>
+              <select value={currentRider?.id || ''} onChange={e => {
+                const r = users.find(u => u.id === Number(e.target.value))
+                setSelectedRider(r || null)
+              }}>
+                {riderList.map(r => (
+                  <option key={r.id} value={r.id}>{r.name} — {r.email}</option>
+                ))}
+              </select>
+            </div>
+
+            {currentRider && (
+              <>
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="card-title">{currentRider.name}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Email</p><p className="fw700">{currentRider.email}</p></div>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Phone</p><p className="fw700">{currentRider.phone || '—'}</p></div>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Status</p><p><Badge status={currentRider.status} /></p></div>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Contract</p><p className="fw700">{riderContract?.contractId || '—'}</p></div>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Total Paid</p><p className="fw700" style={{ color: 'var(--green)' }}>TSh {totalPaid.toLocaleString()}</p></div>
+                    <div><p className="text-muted" style={{ fontSize: 12 }}>Balance</p><p className="fw700" style={{ color: 'var(--red)' }}>
+                      {riderContract ? `TSh ${(riderContract.totalAmount - totalPaid).toLocaleString()}` : '—'}
+                    </p></div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-title">Payment History</div>
+                  <DataTable
+                    columns={['Date', 'Amount', 'Method', 'Status']}
+                    rows={selectedRiderPayments.map(p => [
+                      p.date,
+                      `TSh ${p.amount.toLocaleString()}`,
+                      p.method || '—',
+                      <Badge status={p.status} />
+                    ])}
+                  />
+                  {selectedRiderPayments.length === 0 && (
+                    <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No payments found for this rider.</p>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )
+      }
 
       case 'reports':
         return (

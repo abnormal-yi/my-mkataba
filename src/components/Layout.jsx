@@ -33,6 +33,7 @@ const roleConfig = {
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'users', label: 'All Users', icon: Users },
       { key: 'contracts', label: 'Contracts', icon: FileText },
+      { key: 'payments', label: 'Payments', icon: CreditCard },
       { key: 'reports', label: 'Reports', icon: MapPin },
       { key: 'settings', label: 'Settings', icon: Settings },
     ]
