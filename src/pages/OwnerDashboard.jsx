@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractsForOwner, getPaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider, ownerConfirmContract } from '../data/db'
+import { getContractsForOwner, getPaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider, ownerConfirmContract, getAllLastLocations } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -23,6 +23,8 @@ export default function OwnerDashboard() {
   const [showCredsModal, setShowCredsModal] = useState(false)
   const [lastCredentials, setLastCredentials] = useState({ name: '', email: '', password: '' })
   const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+  const [riderLocations, setRiderLocations] = useState([])
+  const [mapRider, setMapRider] = useState(null)
 
   const loadData = async () => {
     if (!user) return
@@ -34,9 +36,27 @@ export default function OwnerDashboard() {
     setNotifications(n)
     const r = await getRidersForOwner(user.id)
     setRiders(r)
+    const locs = await getAllLastLocations()
+    setRiderLocations(locs)
   }
 
   useEffect(() => { loadData() }, [user])
+
+  useEffect(() => {
+    if (!mapRider) return
+    const timer = setTimeout(() => {
+      const el = document.getElementById('map')
+      if (!el) return
+      if (el._leafletMap) return
+      const map = L.map('map').setView([mapRider.lat, mapRider.lng], 15)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map)
+      L.marker([mapRider.lat, mapRider.lng]).addTo(map)
+      el._leafletMap = map
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [mapRider])
 
   const handleCreateContract = async () => {
     if (!form.riderId || !form.startDate || !form.endDate) {
@@ -109,7 +129,8 @@ export default function OwnerDashboard() {
   const title = tab === 'overview' ? `Owner Dashboard` :
     tab === 'riders' ? 'My Riders' :
     tab === 'contracts' ? 'Contracts' :
-    tab === 'payments' ? 'Payments' : 'Alerts'
+    tab === 'payments' ? 'Payments' :
+    tab === 'locations' ? 'Rider Locations' : 'Alerts'
 
   const tabContent = () => {
     switch (tab) {
@@ -348,6 +369,66 @@ export default function OwnerDashboard() {
               />
               {payments.length === 0 && <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No payments yet.</p>}
             </div>
+          </>
+        )
+
+      case 'locations':
+        return (
+          <>
+            <div className="page-title">Rider Locations</div>
+            <div className="page-sub">Last known GPS location of your riders</div>
+            <div className="card">
+              {riders.filter(r => r.id > 0).map(r => {
+                const loc = riderLocations.find(l => l.riderId === r.id)
+                return (
+                  <div key={r.id} className="flex-between" style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div>
+                      <p className="fw700">{r.name}</p>
+                      <p className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>
+                        {loc
+                          ? `📍 ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)} • ${new Date(loc.timestamp).toLocaleString()}`
+                          : '📍 Hakuna location iliyosharewa'}
+                      </p>
+                    </div>
+                    {loc && (
+                      <button className="nav-btn" style={{ background: '#EDE9FE', color: 'var(--purple)' }}
+                              onClick={() => setMapRider({ ...loc, name: r.name })}>
+                        View Map
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              {riders.filter(r => r.id > 0).length === 0 && (
+                <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No riders found.</p>
+              )}
+            </div>
+
+            {mapRider && (
+              <div className="modal-overlay" onClick={() => setMapRider(null)}>
+                <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '90%' }}>
+                  <div className="modal-title" style={{ fontSize: 16, textAlign: 'center', padding: '16px 16px 0' }}>
+                    📍 {mapRider.name}
+                  </div>
+                  <div className="modal-body" style={{ padding: 0 }}>
+                    <div id="map" style={{ width: '100%', height: 300, borderRadius: 0 }} />
+                    <div style={{ padding: '12px 16px 16px' }}>
+                      <p className="text-muted" style={{ fontSize: 12, marginBottom: 2 }}>Latitude: {mapRider.lat}</p>
+                      <p className="text-muted" style={{ fontSize: 12, marginBottom: 2 }}>Longitude: {mapRider.lng}</p>
+                      <p className="text-muted" style={{ fontSize: 12, marginBottom: 8 }}>Time: {new Date(mapRider.timestamp).toLocaleString()}</p>
+                      <a href={`https://www.openstreetmap.org/?mlat=${mapRider.lat}&mlon=${mapRider.lng}&zoom=15`}
+                         target="_blank" rel="noopener noreferrer"
+                         style={{ color: 'var(--purple)', fontWeight: 600, fontSize: 13 }}>
+                        Open in OpenStreetMap →
+                      </a>
+                    </div>
+                  </div>
+                  <button className="btn-primary" style={{ margin: '0 16px 16px' }} onClick={() => setMapRider(null)}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )
 

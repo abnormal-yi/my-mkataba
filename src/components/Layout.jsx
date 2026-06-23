@@ -23,6 +23,7 @@ const roleConfig = {
       { key: 'riders', label: 'My Riders', icon: Users },
       { key: 'contracts', label: 'Contracts', icon: FileText },
       { key: 'payments', label: 'Payments', icon: CreditCard },
+      { key: 'locations', label: 'Locations', icon: MapPin },
       { key: 'alerts', label: 'Alerts', icon: Bell },
     ]
   },
