@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { getUserByEmail, seedDatabase } from '../data/db'
+import { getUserByEmail, refreshExistingDemoData, seedDatabase } from '../data/db'
 
 const AuthContext = createContext(null)
 
@@ -9,32 +9,24 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    seedDatabase().then(() => setLoading(false))
+    seedDatabase()
+      .then(refreshExistingDemoData)
+      .then(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
     const userData = await getUserByEmail(email)
     if (userData) {
+      const status = String(userData.status || '').toLowerCase()
+      if (status === 'blocked' || status === 'disabled') {
+        return { success: false, error: 'Account is disabled. Contact owner/admin.' }
+      }
       if (userData.password === password) {
         setUser(userData)
         setCurrentRole(userData.role)
         return { success: true }
       }
       return { success: false, error: 'Invalid email or password' }
-    }
-    const users = {
-      rider: { email: 'john@mkataba.tz' },
-      owner: { email: 'hassan@mkataba.tz' },
-      admin: { email: 'admin@mkataba.tz' },
-    }
-    const defaultAccount = users[currentRole]
-    if (defaultAccount) {
-      const fallback = await getUserByEmail(defaultAccount.email)
-      if (fallback && fallback.password === password) {
-        setUser(fallback)
-        setCurrentRole(fallback.role)
-        return { success: true }
-      }
     }
     return { success: false, error: 'Invalid email or password' }
   }

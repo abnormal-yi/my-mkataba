@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getContractsForOwner, getPaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider, ownerConfirmContract, getAllLastLocations } from '../data/db'
+import { getContractsForOwner, getActivePaymentsForOwner, getNotificationsForUser, createContract, createUser, getUserById, getRidersForOwner, blockRider, unblockRider, deleteRider, ownerConfirmContract, getAllLastLocations, isPaidStatus, getPaymentsSummaryForOwner, getPaymentsForRider } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -18,19 +18,22 @@ export default function OwnerDashboard() {
   const [riders, setRiders] = useState([])
   const [toast, setToast] = useState({ show: false, msg: '' })
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ riderId: '', dailyAmount: 1500, totalAmount: 135000, paymentType: 'Daily', motorcycle: 'Boxer 150', startDate: '', endDate: '' })
+  const [form, setForm] = useState({ riderId: '', dailyAmount: 1500, totalAmount: 135000, paymentType: 'Daily', motorcycle: 'Boxer 150', plateNumber: '', startDate: '', endDate: '' })
   const [showRegister, setShowRegister] = useState(false)
   const [showCredsModal, setShowCredsModal] = useState(false)
   const [lastCredentials, setLastCredentials] = useState({ name: '', email: '', password: '' })
-  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+  const [regForm, setRegForm] = useState({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', plateNumber: '', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
   const [riderLocations, setRiderLocations] = useState([])
   const [mapRider, setMapRider] = useState(null)
+  const [ownerSummary, setOwnerSummary] = useState({ totalPaid: 0, totalPending: 0, totalShort: 0, count: 0 })
+  const [selectedRiderPayments, setSelectedRiderPayments] = useState([])
+  const [selectedRiderForPayments, setSelectedRiderForPayments] = useState(null)
 
   const loadData = async () => {
     if (!user) return
     const c = await getContractsForOwner(user.id)
     setContracts(c)
-    const p = await getPaymentsForOwner(user.id)
+    const p = await getActivePaymentsForOwner(user.id)
     setPayments(p)
     const n = await getNotificationsForUser(user.id)
     setNotifications(n)
@@ -38,28 +41,22 @@ export default function OwnerDashboard() {
     setRiders(r)
     const locs = await getAllLastLocations()
     setRiderLocations(locs)
+    const summary = await getPaymentsSummaryForOwner(user.id)
+    setOwnerSummary(summary)
   }
 
   useEffect(() => { loadData() }, [user])
 
   useEffect(() => {
-    if (!mapRider) return
-    const timer = setTimeout(() => {
-      const el = document.getElementById('map')
-      if (!el) return
-      if (el._leafletMap) return
-      const map = L.map('map').setView([mapRider.lat, mapRider.lng], 15)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map)
-      L.marker([mapRider.lat, mapRider.lng]).addTo(map)
-      el._leafletMap = map
-    }, 200)
-    return () => clearTimeout(timer)
-  }, [mapRider])
+    if (!selectedRiderForPayments) {
+      setSelectedRiderPayments([])
+      return
+    }
+    getPaymentsForRider(selectedRiderForPayments.id).then(setSelectedRiderPayments)
+  }, [selectedRiderForPayments])
 
   const handleCreateContract = async () => {
-    if (!form.riderId || !form.startDate || !form.endDate) {
+    if (!form.riderId || !form.startDate || !form.endDate || !form.plateNumber) {
       setToast({ show: true, msg: '⚠️ Please fill all fields' })
       setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       return
@@ -67,6 +64,7 @@ export default function OwnerDashboard() {
     const rider = await getUserById(Number(form.riderId))
     await createContract({
       ...form,
+      motorcycle: `${form.motorcycle} - ${form.plateNumber}`,
       ownerId: user.id,
       ownerName: user.name,
       riderName: rider?.name || 'Unknown',
@@ -84,6 +82,20 @@ export default function OwnerDashboard() {
     loadData()
   }
 
+  const handleUnblockRider = async (riderId) => {
+    await unblockRider(riderId)
+    setToast({ show: true, msg: `Rider is active again.` })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
+  }
+
+  const handleDisableRider = async (riderId) => {
+    await deleteRider(riderId)
+    setToast({ show: true, msg: `Rider disabled. History has been kept.` })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
+  }
+
   const [lastPwd, setLastPwd] = useState('')
 
   const handleRegisterRider = async () => {
@@ -92,14 +104,22 @@ export default function OwnerDashboard() {
       setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       return
     }
-    const result = await createUser({ name: regForm.name, phone: regForm.phone, email: regForm.email, nationalId: regForm.nationalId, region: regForm.region, createdBy: user.id })
+    let result
+    try {
+      result = await createUser({ name: regForm.name, phone: regForm.phone, email: regForm.email, nationalId: regForm.nationalId, region: regForm.region, createdBy: user.id })
+    } catch (error) {
+      setToast({ show: true, msg: error.message || 'Could not register rider' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      return
+    }
     if (regForm.startDate && regForm.endDate) {
+      const plate = regForm.plateNumber || `${regForm.motorcycle.toUpperCase().slice(0,3)} ${100 + result.id}`
       await createContract({
         riderId: result.id,
         ownerId: user.id,
         ownerName: user.name,
         riderName: regForm.name,
-        motorcycle: regForm.motorcycle,
+      motorcycle: `${regForm.motorcycle} - ${plate}`,
         paymentType: regForm.paymentType,
         dailyAmount: regForm.dailyAmount,
         totalAmount: regForm.totalAmount,
@@ -109,7 +129,7 @@ export default function OwnerDashboard() {
     }
     setLastPwd(result.defaultPwd)
     setShowRegister(false)
-    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
+    setRegForm({ name: '', phone: '', email: '', nationalId: '', region: 'Arusha', motorcycle: 'Boxer 150', plateNumber: '', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, startDate: '', endDate: '' })
     setLastCredentials({ name: regForm.name, email: regForm.email || `${regForm.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`, password: result.defaultPwd })
     setShowCredsModal(true)
     loadData()
@@ -122,9 +142,15 @@ export default function OwnerDashboard() {
     loadData()
   }
 
-  const totalPaid = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)
-  const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'missed').reduce((s, p) => s + p.amount, 0)
-  const activeContracts = contracts.filter(c => c.status === 'Active').length
+  const totalPaid = ownerSummary.totalPaid
+  const pendingAmount = ownerSummary.totalPending
+  const activeContracts = contracts.filter(c => String(c.status).toLowerCase() === 'active').length
+  const paidByRider = riders.reduce((acc, rider) => {
+    acc[rider.id] = payments
+      .filter(p => p.riderId === rider.id && isPaidStatus(p.status))
+      .reduce((sum, p) => sum + p.amount, 0)
+    return acc
+  }, {})
 
   const title = tab === 'overview' ? `Owner Dashboard` :
     tab === 'riders' ? 'My Riders' :
@@ -138,7 +164,7 @@ export default function OwnerDashboard() {
         return (
           <>
             <div className="page-title">{title}</div>
-            <div className="page-sub">Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.name?.split(' ')[0]} 👋</div>
+            <div className="page-sub">Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.name?.split(' ')[0]}</div>
             <div className="stats-grid">
               <StatCard label="Total Riders" value={riders.length || 0} color="purple" />
               <StatCard label="Active Contracts" value={activeContracts} color="green" />
@@ -166,16 +192,16 @@ export default function OwnerDashboard() {
             <div className="page-title">My Riders</div>
             <div className="page-sub">Manage riders under your motorcycles</div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-              <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-                {showForm ? '✕ Cancel' : '➕ New Contract'}
+              <button className="btn-primary btn-compact" onClick={() => setShowForm(!showForm)}>
+                {showForm ? 'Cancel' : 'New Contract'}
               </button>
-              <button className="btn-primary" style={{ background: 'var(--green)' }} onClick={() => setShowRegister(!showRegister)}>
-                {showRegister ? '✕ Cancel' : '👤 Register New Rider'}
+              <button className="btn-primary btn-compact btn-green" onClick={() => setShowRegister(!showRegister)}>
+                {showRegister ? 'Cancel' : 'Register Rider + Boda'}
               </button>
             </div>
             {showRegister && (
               <div className="card" style={{ marginBottom: 20, border: '2px solid var(--green)' }}>
-                <div className="card-title">Register New Rider + Create Contract</div>
+                <div className="card-title">Register Rider Account + Assign Boda</div>
                 <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Rider Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -211,13 +237,17 @@ export default function OwnerDashboard() {
                 <div style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Contract Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label>Motorcycle</label>
+                    <label>Motorcycle Model</label>
                     <select value={regForm.motorcycle} onChange={e => setRegForm({ ...regForm, motorcycle: e.target.value })}>
                       <option>Boxer 150</option>
                       <option>Hero Splendor</option>
                       <option>TVS HLX</option>
                       <option>Bajaj</option>
                     </select>
+                  </div>
+                  <div>
+                    <label>Plate Number</label>
+                    <input type="text" value={regForm.plateNumber} onChange={e => setRegForm({ ...regForm, plateNumber: e.target.value.toUpperCase() })} placeholder="e.g. T 245 ABZ" />
                   </div>
                   <div>
                     <label>Payment Type</label>
@@ -243,8 +273,8 @@ export default function OwnerDashboard() {
                     <input type="date" value={regForm.endDate} onChange={e => setRegForm({ ...regForm, endDate: e.target.value })} />
                   </div>
                 </div>
-                <button className="btn-primary" style={{ marginTop: 16, background: 'var(--green)' }} onClick={handleRegisterRider}>
-                  ✅ Register & Create Contract
+                <button className="btn-primary btn-green" style={{ marginTop: 16 }} onClick={handleRegisterRider}>
+                  Create Account & Assign Boda
                 </button>
               </div>
             )}
@@ -269,6 +299,10 @@ export default function OwnerDashboard() {
                     </select>
                   </div>
                   <div>
+                    <label>Plate Number *</label>
+                    <input type="text" value={form.plateNumber} onChange={e => setForm({ ...form, plateNumber: e.target.value.toUpperCase() })} placeholder="e.g. T 245 ABZ" />
+                  </div>
+                  <div>
                     <label>Payment Type</label>
                     <select value={form.paymentType} onChange={e => setForm({ ...form, paymentType: e.target.value })}>
                       <option>Daily</option>
@@ -289,7 +323,7 @@ export default function OwnerDashboard() {
                   </div>
                 </div>
                 <button className="btn-primary" style={{ marginTop: 16 }} onClick={handleCreateContract}>
-                  ✅ Create Contract
+                  Create Contract & Assign Boda
                 </button>
               </div>
             )}
@@ -304,12 +338,23 @@ export default function OwnerDashboard() {
                     <div key={r.id} className="flex-between" style={{ padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                       <div>
                         <p className="fw700">{r.name}</p>
-                        <p className="text-muted" style={{ fontSize: 12 }}>{r.phone} • {rc ? rc.motorcycle : 'No bike'}</p>
+                        <p className="text-muted" style={{ fontSize: 12 }}>
+                          {r.phone || 'No phone'} | {rc ? rc.motorcycle : 'No bike'} | Paid: TSh {(paidByRider[r.id] || 0).toLocaleString()}
+                        </p>
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <Badge status={rc?.status || 'inactive'} />
-                        <button className="nav-btn" style={{ background: 'var(--red-bg)', color: 'var(--red)' }}
-                                onClick={() => handleBlockRider(r.id)}>⛔ Block</button>
+                        <Badge status={r.status || rc?.status || 'inactive'} />
+                        {String(r.status || '').toLowerCase() === 'blocked' || String(r.status || '').toLowerCase() === 'disabled' ? (
+                          <button className="action-btn action-success"
+                                  onClick={() => handleUnblockRider(r.id)}>Unblock</button>
+                        ) : (
+                          <div className="action-row">
+                            <button className="action-btn action-warning"
+                                    onClick={() => handleBlockRider(r.id)}>Block</button>
+                            <button className="action-btn action-danger"
+                                    onClick={() => handleDisableRider(r.id)}>Disable</button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -356,19 +401,62 @@ export default function OwnerDashboard() {
               <StatCard label="Total Collected" value={`TSh ${totalPaid.toLocaleString()}`} color="green" />
               <StatCard label="Pending" value={`TSh ${pendingAmount.toLocaleString()}`} color="yellow" />
             </div>
-            <div className="card">
-              <DataTable
-                columns={['Date', 'Rider', 'Amount', 'Method', 'Status']}
-                rows={payments.map(p => [
-                  p.date,
-                  p.riderName || '—',
-                  `TSh ${p.amount.toLocaleString()}`,
-                  p.method,
-                  <Badge status={p.status} />
-                ])}
-              />
-              {payments.length === 0 && <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No payments yet.</p>}
+
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="card-title">Select Rider</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                {riders.map(r => {
+                  const rc = contracts.find(c => c.riderId === r.id)
+                  const riderPaid = payments.filter(p => p.riderId === r.id && isPaidStatus(p.status)).reduce((s, p) => s + p.amount, 0)
+                  return (
+                    <button key={r.id}
+                      className={`action-btn ${selectedRiderForPayments?.id === r.id ? 'action-success' : 'action-primary'}`}
+                      onClick={() => setSelectedRiderForPayments(r)}>
+                      {r.name} — TSh {riderPaid.toLocaleString()}
+                    </button>
+                  )
+                })}
+              </div>
+              {riders.length === 0 && <p className="text-muted">No riders yet.</p>}
             </div>
+
+            {selectedRiderForPayments && (() => {
+              const rc = contracts.find(c => c.riderId === selectedRiderForPayments.id)
+              const riderTotal = selectedRiderPayments.filter(p => isPaidStatus(p.status)).reduce((s, p) => s + p.amount, 0)
+              const riderPending = selectedRiderPayments.filter(p => p.status === 'pending' || p.status === 'missed').reduce((s, p) => s + p.amount, 0)
+              return (
+                <>
+                  <div className="card" style={{ marginBottom: 16 }}>
+                    <div className="card-title">{selectedRiderForPayments.name} — Full Payment History</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                      <StatCard label="Contract" value={rc?.contractId || '—'} color="purple" />
+                      <StatCard label="Total Paid" value={`TSh ${riderTotal.toLocaleString()}`} color="green" />
+                      <StatCard label="Pending" value={`TSh ${riderPending.toLocaleString()}`} color="yellow" />
+                    </div>
+                    {rc && (
+                      <p className="text-muted" style={{ fontSize: 12, marginBottom: 8 }}>
+                        Contract: {rc.startDate} → {rc.endDate} | {rc.paymentType} TSh {rc.dailyAmount.toLocaleString()} | Total: TSh {rc.totalAmount.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="card">
+                    <div className="card-title">Payment Transactions</div>
+                    <DataTable
+                      columns={['Date', 'Amount', 'Method', 'Status']}
+                      rows={selectedRiderPayments.map(p => [
+                        p.date,
+                        `TSh ${p.amount.toLocaleString()}`,
+                        p.method || '—',
+                        <Badge status={p.status} />
+                      ])}
+                    />
+                    {selectedRiderPayments.length === 0 && (
+                      <p className="text-muted" style={{ textAlign: 'center', padding: 20 }}>No payments yet for this rider.</p>
+                    )}
+                  </div>
+                </>
+              )
+            })()}
           </>
         )
 
@@ -386,16 +474,15 @@ export default function OwnerDashboard() {
                       <p className="fw700">{r.name}</p>
                       <p className="text-muted" style={{ fontSize: 12, marginTop: 2 }}>
                         {loc
-                          ? `📍 ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)} • ${new Date(loc.timestamp).toLocaleString()}`
-                          : '📍 Hakuna location iliyosharewa'}
+                          ? `GPS: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)} | ${new Date(loc.timestamp).toLocaleString()}`
+                           : 'No GPS found yet'}
                       </p>
                     </div>
-                    {loc && (
-                      <button className="nav-btn" style={{ background: '#EDE9FE', color: 'var(--purple)' }}
-                              onClick={() => setMapRider({ ...loc, name: r.name })}>
-                        View Map
-                      </button>
-                    )}
+                    <button className="action-btn action-primary"
+                            disabled={!loc}
+                            onClick={() => loc && setMapRider({ ...loc, name: r.name })}>
+                      Track
+                    </button>
                   </div>
                 )
               })}
@@ -411,7 +498,12 @@ export default function OwnerDashboard() {
                     📍 {mapRider.name}
                   </div>
                   <div className="modal-body" style={{ padding: 0 }}>
-                    <div id="map" style={{ width: '100%', height: 300, borderRadius: 0 }} />
+                    <div style={{ height: 220, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 20 }}>
+                      <div>
+                        <div style={{ fontSize: 42, marginBottom: 8 }}>GPS</div>
+                        <p className="fw700">{mapRider.lat.toFixed(6)}, {mapRider.lng.toFixed(6)}</p>
+                      </div>
+                    </div>
                     <div style={{ padding: '12px 16px 16px' }}>
                       <p className="text-muted" style={{ fontSize: 12, marginBottom: 2 }}>Latitude: {mapRider.lat}</p>
                       <p className="text-muted" style={{ fontSize: 12, marginBottom: 2 }}>Longitude: {mapRider.lng}</p>

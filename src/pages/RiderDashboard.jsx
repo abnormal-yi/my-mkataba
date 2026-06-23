@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Camera } from '@capacitor/camera'
+import { Share } from '@capacitor/share'
 import { useAuth } from '../context/AuthContext'
-import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser, saveLocation, getLastLocation } from '../data/db'
+import { getContractForRider, getActivePaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser as saveUser, saveLocation, getLastLocation } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -31,11 +32,23 @@ export default function RiderDashboard() {
     })()
   }, [user])
 
+  useEffect(() => {
+    if (!user || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        await saveLocation(user.id, user.name, pos.coords.latitude, pos.coords.longitude)
+        setLastShared(new Date().toLocaleTimeString())
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    )
+  }, [user])
+
   const loadData = async () => {
     if (!user) return
     const c = await getContractForRider(user.id)
     setContract(c)
-    const p = await getPaymentsForRider(user.id)
+    const p = await getActivePaymentsForRider(user.id)
     setPayments(p)
     const n = await getNotificationsForUser(user.id)
     setNotifications(n)
@@ -91,22 +104,28 @@ export default function RiderDashboard() {
 
   const handleShareLocation = () => {
     if (!navigator.geolocation) {
-      setToast({ show: true, msg: '⚠️ GPS haipo kwenye kifaa hiki' })
-      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      setToast({ show: true, msg: 'GPS not available on this device' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 4000)
       return
     }
+    setToast({ show: true, msg: 'Searching for location...' })
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         await saveLocation(user.id, user.name, pos.coords.latitude, pos.coords.longitude)
         setLastShared(new Date().toLocaleTimeString())
-        setToast({ show: true, msg: '✅ Location shared successfully!' })
+        setToast({ show: true, msg: 'Location shared successfully!' })
         setTimeout(() => setToast({ show: false, msg: '' }), 3000)
       },
-      () => {
-        setToast({ show: true, msg: '⚠️ Unable to get location. Check GPS settings.' })
-        setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      (err) => {
+        const msgs = {
+          1: 'GPS permission denied. Enable location in settings.',
+          2: 'GPS not available. Check if location is enabled.',
+          3: 'GPS timeout. Try again in an open area.',
+        }
+        setToast({ show: true, msg: msgs[err.code] || 'GPS error. Please try again.' })
+        setTimeout(() => setToast({ show: false, msg: '' }), 5000)
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
     )
   }
 
@@ -120,7 +139,7 @@ export default function RiderDashboard() {
       })
       if (image.photos.length > 0) {
         const photoData = image.photos[0].dataUrl || `data:image/jpeg;base64,${image.photos[0].base64String}`
-        await updateUser(user.id, { photo: photoData })
+        await saveUser(user.id, { photo: photoData })
         updateUser({ photo: photoData })
         setToast({ show: true, msg: '✅ Photo updated!' })
         setTimeout(() => setToast({ show: false, msg: '' }), 3000)
@@ -132,7 +151,7 @@ export default function RiderDashboard() {
   }
 
   const handleSaveProfile = async () => {
-    await updateUser(user.id, profileForm)
+    await saveUser(user.id, profileForm)
     updateUser(profileForm)
     setToast({ show: true, msg: '✅ Profile updated!' })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
@@ -146,19 +165,75 @@ export default function RiderDashboard() {
       return
     }
     const dailyAmount = contract?.dailyAmount || 1500
-    const actualAmount = Math.min(payAmount, dailyAmount)
+    const actualAmount = Number(payAmount)
     await makePayment(user.id, actualAmount)
     const isShort = actualAmount < dailyAmount
     setToast({
       show: true,
       msg: isShort
-        ? `✅ Umelipa TSh ${actualAmount.toLocaleString()} (pungufu). Owner amejulishwa.`
-        : `✅ Payment of TSh ${actualAmount.toLocaleString()} sent!`
+        ? `Payment of TSh ${actualAmount.toLocaleString()} recorded (short). Owner notified.`
+        : `Payment of TSh ${actualAmount.toLocaleString()} sent!`
     })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
     setShowPayModal(false)
     setPayAmount(dailyAmount)
     loadData()
+  }
+
+  const handleDownloadPayments = async () => {
+    const rows = payments.map(p => `
+      <tr>
+        <td>${p.date}</td>
+        <td>TSh ${Number(p.amount || 0).toLocaleString()}</td>
+        <td>${p.method || 'M-Pesa'}</td>
+        <td>${p.status}</td>
+      </tr>
+    `).join('')
+    const total = payments
+      .filter(p => ['paid', 'partial'].includes(String(p.status).toLowerCase()))
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0)
+    const html = `
+      <html>
+        <head>
+          <title>${user?.name || 'Rider'} Payments</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+            h1 { margin-bottom: 4px; }
+            .muted { color: #6b7280; margin-bottom: 18px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+            th { background: #f3f4f6; }
+            .total { margin-top: 18px; font-weight: 700; font-size: 18px; }
+          </style>
+        </head>
+        <body>
+          <h1>My Mkataba Payment History</h1>
+          <div class="muted">Rider: ${user?.name || 'Unknown'} | Contract: ${contract?.contractId || '-'}</div>
+          <table>
+            <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="4">No payments yet.</td></tr>'}</tbody>
+          </table>
+          <div class="total">Total Paid: TSh ${total.toLocaleString()}</div>
+        </body>
+      </html>
+    `
+    try {
+      await Share.share({
+        title: 'Payment History',
+        text: `Payment History for ${user?.name || 'Rider'}\nContract: ${contract?.contractId || '-'}\nTotal Paid: TSh ${total.toLocaleString()}\n\n${payments.map(p => `${p.date} - TSh ${p.amount.toLocaleString()} (${p.status})`).join('\n')}`,
+        dialogTitle: 'Share Payment History',
+      })
+    } catch (err) {
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${user?.name || 'rider'}-payments.html`
+      a.click()
+      URL.revokeObjectURL(url)
+      setToast({ show: true, msg: 'Payment history downloaded.' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    }
   }
 
   const progress = contract ? Math.round((contract.paidAmount / contract.totalAmount) * 100) : 0
@@ -171,7 +246,7 @@ export default function RiderDashboard() {
     if (day) calStatus[day] = p.status
   })
 
-  const title = tab === 'overview' ? `Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'}, ${user?.name?.split(' ')[0]} 👋` :
+  const title = tab === 'overview' ? `Good ${new Date().getHours() < 12 ? 'morning' : 'afternoon'}, ${user?.name?.split(' ')[0]}` :
     tab === 'contract' ? 'My Contract' :
     tab === 'payments' ? 'Payment History' :
     tab === 'location' ? 'Share Location' :
@@ -290,10 +365,10 @@ export default function RiderDashboard() {
                     </p>
                     <label>Amount to Pay (TSh)</label>
                     <input type="number" value={payAmount} onChange={e => setPayAmount(Number(e.target.value))}
-                           min={100} max={contract?.dailyAmount || 1500} />
+                           min={100} />
                     {payAmount < (contract?.dailyAmount || 1500) && (
                       <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 4 }}>
-                        ⚠️ Utalipa kiasi pungufu. Owner atajulishwa.
+                        ⚠️ Partial payment. Owner will be notified.
                       </p>
                     )}
                     <button className="btn-primary" style={{ background: 'var(--green)', marginTop: 12 }} onClick={handlePay}>
@@ -366,6 +441,9 @@ export default function RiderDashboard() {
           <>
             <div className="page-title">Payment History</div>
             <div className="page-sub">All transactions on your contract</div>
+            <button className="btn-primary" style={{ maxWidth: 220, marginBottom: 16, background: 'var(--green)' }} onClick={handleDownloadPayments}>
+              Download PDF
+            </button>
             <div className="card">
               <DataTable
                 columns={['Date', 'Amount', 'Method', 'Status']}

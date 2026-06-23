@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { App } from '@capacitor/app'
 import SplashPage from './pages/SplashPage'
 import LoginPage from './pages/LoginPage'
 import RiderDashboard from './pages/RiderDashboard'
@@ -10,6 +11,27 @@ import AdminDashboard from './pages/AdminDashboard'
 import BlockedPage from './pages/BlockedPage'
 import ContractFormPage from './pages/ContractFormPage'
 import './index.css'
+
+function BackButtonHandler() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    const handler = App.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        navigate(-1)
+      } else if (user) {
+        const dashMap = { rider: '/rider', owner: '/owner', admin: '/admin' }
+        navigate(dashMap[user.role] || '/')
+      } else {
+        App.exitApp()
+      }
+    })
+    return () => { handler.then(h => h.remove()) }
+  }, [navigate, user])
+
+  return null
+}
 
 function AppRoutes() {
   const { user, loading } = useAuth()
@@ -27,18 +49,22 @@ function AppRoutes() {
   }
 
   const dashMap = { rider: '/rider', owner: '/owner', admin: '/admin' }
+  const isBlocked = ['blocked', 'disabled'].includes(String(user?.status || '').toLowerCase())
 
   return (
+    <>
+    <BackButtonHandler />
     <Routes>
       <Route path="/" element={!user ? <SplashPage /> : <Navigate to={dashMap[user.role] || '/login'} />} />
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={dashMap[user.role] || '/rider'} />} />
-      <Route path="/rider" element={user ? <RiderDashboard /> : <Navigate to="/login" />} />
-      <Route path="/owner" element={user ? <OwnerDashboard /> : <Navigate to="/login" />} />
-      <Route path="/admin" element={user ? <AdminDashboard /> : <Navigate to="/login" />} />
+      <Route path="/rider" element={user && !isBlocked && user.role === 'rider' ? <RiderDashboard /> : user ? <Navigate to={isBlocked ? '/blocked' : dashMap[user.role]} /> : <Navigate to="/login" />} />
+      <Route path="/owner" element={user && user.role === 'owner' ? <OwnerDashboard /> : user ? <Navigate to={dashMap[user.role]} /> : <Navigate to="/login" />} />
+      <Route path="/admin" element={user && user.role === 'admin' ? <AdminDashboard /> : user ? <Navigate to={dashMap[user.role]} /> : <Navigate to="/login" />} />
       <Route path="/blocked" element={user ? <BlockedPage /> : <Navigate to="/login" />} />
       <Route path="/new-contract" element={user ? <ContractFormPage /> : <Navigate to="/login" />} />
       <Route path="*" element={!user ? <SplashPage /> : <Navigate to={dashMap[user.role] || '/rider'} />} />
     </Routes>
+    </>
   )
 }
 

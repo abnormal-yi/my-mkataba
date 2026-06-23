@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase, deleteRider, getPaymentsForRider } from '../data/db'
+import { getAllUsers, getAllContracts, getAllPayments, getAllNotifications, updateContractStatus, resetDatabase, deleteRider, getPaymentsForRider, blockRider, unblockRider, isPaidStatus } from '../data/db'
 import Layout from '../components/Layout'
 import StatCard from '../components/StatCard'
 import Badge from '../components/Badge'
@@ -34,13 +34,25 @@ export default function AdminDashboard() {
   useEffect(() => { loadData() }, [user])
 
   useEffect(() => {
-    if (!selectedRider) return
+    if (!selectedRider) {
+      setSelectedRiderPayments([])
+      return
+    }
     getPaymentsForRider(selectedRider.id).then(setSelectedRiderPayments)
   }, [selectedRider])
 
   const handleBlockUser = async (userId) => {
-    setToast({ show: true, msg: `⛔ User ${userId} blocked` })
+    await blockRider(userId)
+    setToast({ show: true, msg: `User blocked` })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
+  }
+
+  const handleUnblockUser = async (userId) => {
+    await unblockRider(userId)
+    setToast({ show: true, msg: `User active again` })
+    setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    loadData()
   }
 
   const handleResolve = async (contractId) => {
@@ -53,14 +65,14 @@ export default function AdminDashboard() {
   const handleDeleteRider = async (userId) => {
     await deleteRider(userId)
     setConfirmDelete(null)
-    setToast({ show: true, msg: `🗑️ Rider deleted permanently!` })
+    setToast({ show: true, msg: `Rider disabled. History has been kept.` })
     setTimeout(() => setToast({ show: false, msg: '' }), 3000)
     loadData()
   }
 
   const usersByRole = role => users.filter(u => u.role === role).length
-  const activeContracts = contracts.filter(c => c.status === 'active').length
-  const totalCollected = payments.filter(p => p.status === 'confirmed' || p.status === 'completed').reduce((s, p) => s + p.amount, 0)
+  const activeContracts = contracts.filter(c => String(c.status).toLowerCase() === 'active').length
+  const totalCollected = payments.filter(p => isPaidStatus(p.status)).reduce((s, p) => s + p.amount, 0)
   const pendingPayments = payments.filter(p => p.status === 'pending').length
 
   const title = tab === 'overview' ? 'Admin Overview' :
@@ -113,10 +125,14 @@ export default function AdminDashboard() {
                   <Badge status={u.role === 'admin' ? 'danger' : u.role === 'owner' ? 'purple' : 'green'} label={u.role} />,
                   <Badge status={u.status || 'active'} />,
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="nav-btn" style={{ background: 'var(--red-bg)', color: 'var(--red)' }} onClick={() => handleBlockUser(u.id)}>Block</button>
+                    {String(u.status || '').toLowerCase() === 'blocked' || String(u.status || '').toLowerCase() === 'disabled' ? (
+                      <button className="action-btn action-success" onClick={() => handleUnblockUser(u.id)}>Unblock</button>
+                    ) : (
+                      <button className="action-btn action-warning" onClick={() => handleBlockUser(u.id)}>Block</button>
+                    )}
                     {u.role === 'rider' && (
-                      <button className="nav-btn" style={{ background: '#FEE2E2', color: '#DC2626' }}
-                              onClick={() => setConfirmDelete(u)}>Delete</button>
+                      <button className="action-btn action-danger"
+                              onClick={() => setConfirmDelete(u)}>Disable</button>
                     )}
                   </div>
                 ])}
@@ -138,8 +154,8 @@ export default function AdminDashboard() {
                   `#${c.contractId}`, c.riderName, c.ownerName, c.motorcycle,
                   `TSh ${c.totalAmount.toLocaleString()}`,
                   <Badge status={c.status} />,
-                  c.status !== 'completed' ? (
-                    <button className="nav-btn" style={{ background: 'var(--green-bg)', color: 'var(--green)' }} onClick={() => handleResolve(c.contractId)}>Resolve</button>
+                  String(c.status).toLowerCase() !== 'completed' ? (
+                    <button className="action-btn action-success" onClick={() => handleResolve(c.contractId)}>Resolve</button>
                   ) : '—'
                 ])}
               />
@@ -153,7 +169,7 @@ export default function AdminDashboard() {
         const currentRider = selectedRider || riderList[0] || null
         const riderContract = currentRider ? contracts.find(c => c.riderId === currentRider.id) : null
         const totalPaid = selectedRiderPayments
-          .filter(p => p.status === 'paid' || p.status === 'partial')
+          .filter(p => isPaidStatus(p.status))
           .reduce((s, p) => s + p.amount, 0)
 
         return (
@@ -217,31 +233,22 @@ export default function AdminDashboard() {
             <div className="page-sub">Platform analytics and summaries</div>
             <div className="stats-grid">
               <StatCard label="Total Revenue" value={`TSh ${totalCollected.toLocaleString()}`} color="green" />
-              <StatCard label="Active Users" value={users.filter(u => u.status !== 'blocked').length} color="purple" />
+              <StatCard label="Active Users" value={users.filter(u => !['blocked', 'disabled'].includes(String(u.status || '').toLowerCase())).length} color="purple" />
               <StatCard label="Avg Contract Value" value={`TSh ${contracts.length ? Math.round(contracts.reduce((s, c) => s + c.totalAmount, 0) / contracts.length).toLocaleString() : 0}`} color="blue" />
-              <StatCard label="Blocked Users" value={users.filter(u => u.status === 'blocked').length} color="red" />
+              <StatCard label="Blocked Users" value={users.filter(u => ['blocked', 'disabled'].includes(String(u.status || '').toLowerCase())).length} color="red" />
             </div>
             <div className="card">
               <div className="card-title">Payment Summary</div>
               <DataTable
                 columns={['Metric', 'Value']}
                 rows={[
-                  ['Total Confirmed Payments', `TSh ${totalCollected.toLocaleString()}`],
+                  ['Total Paid Amount', `TSh ${totalCollected.toLocaleString()}`],
                   ['Pending Approvals', pendingPayments.toString()],
                   ['Total Transactions', payments.length.toString()],
                   ['Contracts Active', activeContracts.toString()],
-                  ['Contracts Completed', contracts.filter(c => c.status === 'completed').length.toString()],
+                  ['Contracts Completed', contracts.filter(c => String(c.status).toLowerCase() === 'completed').length.toString()],
                 ]}
               />
-            </div>
-            <div className="card">
-              <div className="card-title">Export Data</div>
-              <p className="text-muted" style={{ marginBottom: 16 }}>Download platform data for external analysis.</p>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <button className="btn-primary" onClick={() => { setToast({ show: true, msg: '📊 Users CSV exported!' }); setTimeout(() => setToast({ show: false, msg: '' }), 3000) }}>📄 Export Users</button>
-                <button className="btn-primary" style={{ background: 'var(--green)' }} onClick={() => { setToast({ show: true, msg: '📊 Contracts CSV exported!' }); setTimeout(() => setToast({ show: false, msg: '' }), 3000) }}>📄 Export Contracts</button>
-                <button className="btn-primary" style={{ background: 'var(--purple)' }} onClick={() => { setToast({ show: true, msg: '📊 Payments CSV exported!' }); setTimeout(() => setToast({ show: false, msg: '' }), 3000) }}>📄 Export Payments</button>
-              </div>
             </div>
           </>
         )
@@ -287,17 +294,16 @@ export default function AdminDashboard() {
         <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
             <div className="modal-icon">⚠️</div>
-            <div className="modal-title">Delete Rider?</div>
+            <div className="modal-title">Disable Rider?</div>
             <div className="modal-body">
               <p style={{ marginBottom: 16 }}>
-                Una uhakika unataka kumfuta <strong>{confirmDelete.name}</strong>?
-                Hatua hii itafuta rider, mkataba wake, malipo yote, na data zake.
-                Haiwezi kutenduliwa.
+                Are you sure you want to remove <strong>{confirmDelete.name}</strong> from access?
+                Details, contracts, payments, and location history will remain in the system.
               </p>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button className="btn-primary" style={{ background: 'var(--red)', flex: 1 }}
                         onClick={() => handleDeleteRider(confirmDelete.id)}>
-                  🗑️ Delete
+                  Disable
                 </button>
                 <button className="btn-primary" style={{ background: 'transparent', color: 'var(--muted)', boxShadow: 'none', flex: 1 }}
                         onClick={() => setConfirmDelete(null)}>

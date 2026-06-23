@@ -17,7 +17,7 @@ export async function seedDatabase() {
 
   await db.users.bulkAdd([
     { id: 1, name: 'John Msumi', email: 'john@mkataba.tz', password: '1234', role: 'rider', initials: 'JM', phone: '+255 712 345 678', nationalId: '19900123456789', status: 'Active', region: 'Arusha' },
-    { id: 2, name: 'Hassan Mwangi', email: 'hassan@mkataba.tz', password: '1234', role: 'owner', initials: 'HM', phone: '+255 754 111 222', nationalId: '19880123456789', status: 'Active', region: 'Arusha' },
+    { id: 2, name: 'Alinda Rwegasila', email: 'alinda@mkataba.tz', password: '1234', role: 'owner', initials: 'AR', phone: '+255 754 111 222', nationalId: '19880123456789', status: 'Active', region: 'Arusha' },
     { id: 3, name: 'Super Creator', email: 'admin@mkataba.tz', password: '1234', role: 'admin', initials: 'SC', phone: '+255 800 000 000', nationalId: '19850123456789', status: 'Active', region: 'Arusha' },
     { id: 4, name: 'Peter Njau', email: 'peter@mkataba.tz', password: '1234', role: 'rider', initials: 'PJ', phone: '+255 765 432 100', nationalId: '19920123456789', status: 'Overdue', region: 'Arusha' },
     { id: 5, name: 'David Kesi', email: 'david@mkataba.tz', password: '1234', role: 'rider', initials: 'DK', phone: '+255 688 999 001', nationalId: '19930123456789', status: 'Pending', region: 'Arusha', firstLogin: true },
@@ -26,25 +26,25 @@ export async function seedDatabase() {
   ])
 
   await db.contracts.bulkAdd([
-    { contractId: 'MK-0847', ownerId: 2, riderId: 1, ownerName: 'Hassan Mwangi', riderName: 'John Msumi', startDate: 'May 14, 2026', endDate: 'Aug 12, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 87000, motorcycle: 'T 245 ABZ', status: 'Active', region: 'Arusha', gracePeriod: 3, agreementText: 'I, John Msumi, agree to make daily payments of TSh 1,500 to Hassan Mwangi as per the contract terms. Failure to make payment within 3 days will result in account suspension. This agreement was accepted digitally.', signedDate: 'May 14, 2026 at 9:42 AM' },
-    { contractId: 'MK-0831', ownerId: 2, riderId: 4, ownerName: 'Hassan Mwangi', riderName: 'Peter Njau', startDate: 'Apr 1, 2026', endDate: 'Jul 29, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 51000, motorcycle: 'T 246 BCY', status: 'Overdue', region: 'Arusha', gracePeriod: 3, agreementText: '', signedDate: 'Apr 1, 2026 at 8:00 AM' },
-    { contractId: 'MK-0819', ownerId: 2, riderId: 5, ownerName: 'Hassan Mwangi', riderName: 'David Kesi', startDate: 'Mar 20, 2026', endDate: 'Jul 17, 2026', paymentType: 'Weekly', dailyAmount: 10500, totalAmount: 120000, paidAmount: 66000, motorcycle: 'T 247 CDZ', status: 'Pending', region: 'Arusha', gracePeriod: 3, agreementText: '', signedDate: '' },
-    { contractId: 'MK-0802', ownerId: 2, riderId: 6, ownerName: 'Hassan Mwangi', riderName: 'Ali Rashid', startDate: 'Mar 1, 2026', endDate: 'Jun 28, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 118000, motorcycle: 'T 248 DEF', status: 'Active', region: 'Moshi', gracePeriod: 3, agreementText: '', signedDate: 'Mar 1, 2026 at 7:30 AM' },
+    { contractId: 'MK-0847', ownerId: 2, riderId: 1, ownerName: 'Alinda Rwegasila', riderName: 'John Msumi', startDate: 'May 14, 2026', endDate: 'Aug 12, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 87000, motorcycle: 'T 245 ABZ', status: 'Active', region: 'Arusha', gracePeriod: 3, agreementText: 'I, John Msumi, agree to make daily payments of TSh 1,500 to Alinda Rwegasila as per the contract terms. Failure to make payment within 3 days will result in account suspension. This agreement was accepted digitally.', signedDate: 'May 14, 2026 at 9:42 AM' },
+    { contractId: 'MK-0831', ownerId: 2, riderId: 4, ownerName: 'Alinda Rwegasila', riderName: 'Peter Njau', startDate: 'Apr 1, 2026', endDate: 'Jul 29, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 51000, motorcycle: 'T 246 BCY', status: 'Overdue', region: 'Arusha', gracePeriod: 3, agreementText: '', signedDate: 'Apr 1, 2026 at 8:00 AM' },
+    { contractId: 'MK-0819', ownerId: 2, riderId: 5, ownerName: 'Alinda Rwegasila', riderName: 'David Kesi', startDate: 'Mar 20, 2026', endDate: 'Jul 17, 2026', paymentType: 'Weekly', dailyAmount: 10500, totalAmount: 120000, paidAmount: 66000, motorcycle: 'T 247 CDZ', status: 'Pending', region: 'Arusha', gracePeriod: 3, agreementText: '', signedDate: '' },
+    { contractId: 'MK-0802', ownerId: 2, riderId: 6, ownerName: 'Alinda Rwegasila', riderName: 'Ali Rashid', startDate: 'Mar 1, 2026', endDate: 'Jun 28, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 135000, paidAmount: 118000, motorcycle: 'T 248 DEF', status: 'Active', region: 'Moshi', gracePeriod: 3, agreementText: '', signedDate: 'Mar 1, 2026 at 7:30 AM' },
     { contractId: 'MK-0790', ownerId: 7, riderId: 0, ownerName: 'Grace Mbeki', riderName: 'Salim Omar', startDate: 'Feb 15, 2026', endDate: 'Jun 15, 2026', paymentType: 'Daily', dailyAmount: 1500, totalAmount: 150000, paidAmount: 120000, motorcycle: 'T 249 GHI', status: 'Active', region: 'Dar es Salaam', gracePeriod: 3, agreementText: '', signedDate: '' },
   ])
 
   await db.payments.bulkAdd([
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 58, 'Jun 12, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 57, 'Jun 11, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 56, 'Jun 10, 2026', 'missed', '—'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 55, 'Jun 9, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 54, 'Jun 8, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 53, 'Jun 7, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 52, 'Jun 6, 2026', 'pending', '—'),
-    ...generatePayments(2, 1, 'John Msumi', 'Hassan Mwangi', 51, 'Jun 5, 2026', 'paid', 'M-Pesa'),
-    ...generatePayments(2, 4, 'Peter Njau', 'Hassan Mwangi', 0, 'Jun 12, 2026', 'missed', '—'),
-    ...generatePayments(2, 5, 'David Kesi', 'Hassan Mwangi', 0, 'Jun 12, 2026', 'pending', '—'),
-    ...generatePayments(7, 0, 'Salim Omar', 'Grace Mbeki', 0, 'Jun 12, 2026', 'paid', 'Tigo Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 12, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 11, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 10, 2026', 'missed', '—'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 9, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 8, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 7, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 6, 2026', 'pending', '—'),
+    ...generatePayments('MK-0847', 2, 1, 'John Msumi', 'Alinda Rwegasila', 1500, 'Jun 5, 2026', 'paid', 'M-Pesa'),
+    ...generatePayments('MK-0831', 2, 4, 'Peter Njau', 'Alinda Rwegasila', 1500, 'Jun 12, 2026', 'missed', '—'),
+    ...generatePayments('MK-0819', 2, 5, 'David Kesi', 'Alinda Rwegasila', 10500, 'Jun 12, 2026', 'pending', '—'),
+    ...generatePayments('MK-0790', 7, 0, 'Salim Omar', 'Grace Mbeki', 1500, 'Jun 12, 2026', 'paid', 'Tigo Pesa'),
   ])
 
   await db.notifications.bulkAdd([
@@ -66,32 +66,22 @@ export async function seedDatabase() {
   ])
 }
 
-function generatePayments(ownerId, riderId, riderName, ownerName, count, date, status, method) {
-  const results = []
-  const nums = typeof count === 'number' ? [count] : []
-  const dates = typeof date === 'string' ? [date] : date
-  const statuses = typeof status === 'string' ? [status] : status
-  const methods = typeof method === 'string' ? [method] : method
-
-  if (nums.length === 0 && dates.length === 0) return []
-
-  const numPayments = nums.length || dates.length
-  for (let i = 0; i < numPayments; i++) {
-    results.push({
-      contractId: 'MK-0847',
-      riderId, ownerId,
-      riderName, ownerName,
-      date: dates[i % dates.length],
-      amount: 1500,
-      method: methods[i % methods.length],
-      status: statuses[i % statuses.length],
-    })
-  }
-  return results
+function generatePayments(contractId, ownerId, riderId, riderName, ownerName, amount, date, status, method) {
+  return [{
+    contractId,
+    riderId,
+    ownerId,
+    riderName,
+    ownerName,
+    date,
+    amount,
+    method,
+    status,
+  }]
 }
 
 export async function getUserByEmail(email) {
-  return db.users.where('email').equals(email).first()
+  return db.users.where('email').equals((email || '').trim().toLowerCase()).first()
 }
 
 export async function getUserById(id) {
@@ -142,21 +132,26 @@ export async function getSettings() {
 }
 
 export async function createUser(data) {
-  const maxId = await db.users.count()
+  const lastUser = await db.users.orderBy('id').last()
   const defaultPwd = '1234'
+  const email = (data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`).trim().toLowerCase()
+  const existing = await getUserByEmail(email)
+  if (existing) {
+    throw new Error('Email already exists')
+  }
   const user = {
-    id: maxId + 1,
+    id: (lastUser?.id || 0) + 1,
     name: data.name,
-    email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@mkataba.tz`,
+    email,
     password: defaultPwd,
-    role: 'rider',
+    role: data.role || 'rider',
     initials: data.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
     phone: data.phone || '',
     nationalId: data.nationalId || '',
     status: 'Active',
     region: data.region || 'Arusha',
     createdBy: data.createdBy || 0,
-    firstLogin: true,
+    firstLogin: data.role === 'owner' ? false : true,
   }
   await db.users.add(user)
   return { ...user, defaultPwd }
@@ -191,7 +186,7 @@ export async function createContract(data) {
 export async function makePayment(riderId, customAmount) {
   const contract = await db.contracts.where('riderId').equals(riderId).first()
   if (!contract) return null
-  const amount = customAmount || contract.dailyAmount
+  const amount = Number(customAmount) || contract.dailyAmount
   const newPaid = contract.paidAmount + amount
   const today = new Date()
   const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -222,13 +217,13 @@ export async function makePayment(riderId, customAmount) {
       await db.notifications.add({
         userId: riderId, type: 'missed',
         title: `Partial Payment — ${dateStr}`,
-        desc: `Umefaulu kulipa TSh ${amount.toLocaleString()} kwa siku ya leo. Kiasi pungufu TSh ${shortAmount.toLocaleString()}.`,
+        desc: `You paid TSh ${amount.toLocaleString()} today. Short by TSh ${shortAmount.toLocaleString()}.`,
         time: 'Just now', read: false,
       })
       await db.notifications.add({
         userId: contract.ownerId, type: 'missed',
         title: `Partial Payment from ${contract.riderName}`,
-        desc: `${contract.riderName} amelipa TSh ${amount.toLocaleString()} (pungufu). Anadaiwa TSh ${shortAmount.toLocaleString()}.`,
+        desc: `${contract.riderName} paid TSh ${amount.toLocaleString()} (short). Owes TSh ${shortAmount.toLocaleString()}.`,
         time: 'Just now', read: false,
       })
     } else {
@@ -236,6 +231,12 @@ export async function makePayment(riderId, customAmount) {
         userId: riderId, type: 'paid',
         title: `Payment Confirmed – ${dateStr}`,
         desc: `Your payment of TSh ${amount.toLocaleString()} was received. Thank you!`,
+        time: 'Just now', read: false,
+      })
+      await db.notifications.add({
+        userId: contract.ownerId, type: 'paid',
+        title: `Payment from ${contract.riderName}`,
+        desc: `${contract.riderName} paid TSh ${amount.toLocaleString()} for ${contract.contractId}.`,
         time: 'Just now', read: false,
       })
     }
@@ -269,12 +270,17 @@ export async function getAllLastLocations() {
 }
 
 export async function deleteRider(riderId) {
-  await db.transaction('rw', db.users, db.contracts, db.payments, db.notifications, db.locations, async () => {
-    await db.users.where('id').equals(riderId).delete()
-    await db.contracts.where('riderId').equals(riderId).delete()
-    await db.payments.where('riderId').equals(riderId).delete()
-    await db.notifications.where('userId').equals(riderId).delete()
-    await db.locations.where('riderId').equals(riderId).delete()
+  await db.transaction('rw', db.users, db.contracts, db.notifications, async () => {
+    await db.users.update(riderId, { status: 'Disabled' })
+    await db.contracts.where('riderId').equals(riderId).modify({ status: 'Disabled' })
+    await db.notifications.add({
+      userId: riderId,
+      type: 'danger',
+      title: 'Account Disabled',
+      desc: 'Your access has been disabled after contract termination. Payment history remains saved.',
+      time: 'Just now',
+      read: false,
+    })
   })
 }
 
@@ -289,17 +295,33 @@ export async function blockRider(riderId) {
   })
 }
 
+export async function unblockRider(riderId) {
+  await db.users.update(riderId, { status: 'Active' })
+  await db.contracts.where('riderId').equals(riderId).modify({ status: 'Active' })
+  await db.notifications.add({
+    userId: riderId,
+    type: 'paid',
+    title: 'Account Active',
+    desc: 'Your account has been reactivated.',
+    time: 'Just now',
+    read: false,
+  })
+}
+
 export async function renewContract(contractId) {
   const contract = await db.contracts.where('contractId').equals(contractId).first()
   if (!contract) return
   const start = new Date()
   const end = new Date(start)
   end.setDate(end.getDate() + 90)
-  await db.contracts.update(contract.id, {
-    status: 'Active',
-    startDate: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    endDate: end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    paidAmount: 0,
+  await db.transaction('rw', db.contracts, db.payments, async () => {
+    await db.contracts.update(contract.id, {
+      status: 'Active',
+      startDate: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      endDate: end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      paidAmount: 0,
+    })
+    await db.payments.where('contractId').equals(contractId).modify({ status: 'archived' })
   })
 }
 
@@ -399,6 +421,60 @@ export async function saveSettings(settings) {
     } else {
       await db.settings.add({ key, value })
     }
+  }
+}
+
+export function isPaidStatus(status) {
+  return ['paid', 'partial', 'completed', 'confirmed'].includes(String(status || '').toLowerCase())
+}
+
+export async function getPaymentsForContract(contractId) {
+  return db.payments.where('contractId').equals(contractId).reverse().sortBy('id')
+}
+
+export async function getActivePaymentsForRider(riderId) {
+  const contract = await getContractForRider(riderId)
+  if (!contract) return []
+  const payments = await getPaymentsForContract(contract.contractId)
+  return payments.filter(p => p.status !== 'archived')
+}
+
+export async function getActivePaymentsForOwner(ownerId) {
+  const contracts = await getContractsForOwner(ownerId)
+  const payments = await getPaymentsForOwner(ownerId)
+  return payments.filter(p => p.status !== 'archived')
+}
+
+export async function getPaymentsSummaryForOwner(ownerId) {
+  const payments = await getPaymentsForOwner(ownerId)
+  const active = payments.filter(p => p.status !== 'archived')
+  const totalPaid = active.filter(p => isPaidStatus(p.status)).reduce((s, p) => s + p.amount, 0)
+  const totalPending = active.filter(p => p.status === 'pending' || p.status === 'missed').reduce((s, p) => s + p.amount, 0)
+  const totalShort = active.filter(p => p.status === 'partial').reduce((s, p) => s + p.amount, 0)
+  return { totalPaid, totalPending, totalShort, count: active.length }
+}
+
+export async function refreshExistingDemoData() {
+  const owner = await getUserById(2)
+  if (owner && owner.name !== 'Alinda Rwegasila') {
+    await db.users.update(2, {
+      name: 'Alinda Rwegasila',
+      email: 'alinda@mkataba.tz',
+      initials: 'AR',
+    })
+    await db.contracts.where('ownerId').equals(2).modify({ ownerName: 'Alinda Rwegasila' })
+    await db.payments.where('ownerId').equals(2).modify({ ownerName: 'Alinda Rwegasila' })
+  }
+
+  const contracts = await db.contracts.toArray()
+  for (const contract of contracts) {
+    await db.payments.where('riderId').equals(contract.riderId).modify(payment => {
+      if (payment.ownerId === contract.ownerId) {
+        payment.contractId = contract.contractId
+        payment.riderName = contract.riderName
+        payment.ownerName = contract.ownerName
+      }
+    })
   }
 }
 
