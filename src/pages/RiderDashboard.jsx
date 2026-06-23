@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Camera } from '@capacitor/camera'
 import { useAuth } from '../context/AuthContext'
 import { getContractForRider, getPaymentsForRider, getNotificationsForUser, makePayment, acceptContract, rejectContract, changePassword, updateUser, saveLocation, getLastLocation } from '../data/db'
 import Layout from '../components/Layout'
@@ -107,6 +108,27 @@ export default function RiderDashboard() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
+  }
+
+  const handleUploadPhoto = async () => {
+    try {
+      const image = await Camera.pickImages({
+        limit: 1,
+        quality: 50,
+        width: 300,
+        height: 300,
+      })
+      if (image.photos.length > 0) {
+        const photoData = image.photos[0].dataUrl || `data:image/jpeg;base64,${image.photos[0].base64String}`
+        await updateUser(user.id, { photo: photoData })
+        updateUser({ photo: photoData })
+        setToast({ show: true, msg: '✅ Photo updated!' })
+        setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+      }
+    } catch (e) {
+      setToast({ show: true, msg: '⚠️ Could not access camera/gallery' })
+      setTimeout(() => setToast({ show: false, msg: '' }), 3000)
+    }
   }
 
   const handleSaveProfile = async () => {
@@ -403,10 +425,17 @@ export default function RiderDashboard() {
             <div className="page-sub">Personal account information</div>
             <div className="card" style={{ maxWidth: 480 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#6C3FC5,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 24, fontWeight: 800 }}>
-                  {user?.initials}
+                <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#6C3FC5,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {user?.photo ? (
+                    <img src={user.photo} alt={user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ color: '#fff', fontSize: 24, fontWeight: 800 }}>{user?.initials}</span>
+                  )}
                 </div>
                 <div>
+                  <button className="nav-btn" style={{ marginTop: 8, fontSize: 12 }} onClick={handleUploadPhoto}>
+                    📷 Change Photo
+                  </button>
                   <h3 style={{ fontSize: 18 }}>{user?.name}</h3>
                   <p className="text-muted">{user?.role}</p>
                 </div>

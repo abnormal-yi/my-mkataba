@@ -75,7 +75,11 @@ export default function Layout({ children, activeTab, onTabChange, role, onLogou
             </div>
           </div>
           <div className="sidebar-user">
-            <div className="s-avatar">{user?.initials}</div>
+            <div className="s-avatar" style={user?.photo ? { padding: 0, overflow: 'hidden' } : {}}>
+              {user?.photo ? (
+                <img src={user.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : user?.initials}
+            </div>
             <div>
               <div className="s-uname">{user?.name}</div>
               <div className="s-email">{user?.email}</div>
