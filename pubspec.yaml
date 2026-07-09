@@ -1,0 +1,35 @@
+name: my_mkataba
+description: "My Mkataba - Boda Boda Contract Management"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  dio: ^5.7.0
+  go_router: ^14.8.1
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.3.5
+  google_fonts: ^6.2.1
+  intl: ^0.20.2
+  table_calendar: ^3.1.3
+  connectivity_plus: ^6.1.4
+  sqflite: ^2.4.1
+  image_picker: ^1.2.1
+  geolocator: ^14.0.2
+  geocoding: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
