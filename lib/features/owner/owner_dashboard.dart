@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:my_mkataba/core/theme/app_theme.dart';
 import 'package:my_mkataba/models/app_models.dart';
 import 'package:my_mkataba/providers/rider_summary_provider.dart';
+import 'package:my_mkataba/providers/payment_provider.dart';
 import 'package:my_mkataba/widgets/common_widgets.dart';
 
 class OwnerDashboard extends ConsumerStatefulWidget {
@@ -27,6 +28,9 @@ class _OwnerDashboardState extends ConsumerState<OwnerDashboard> {
       RiderSummary(riderId: 'rider-003', riderName: 'Ali H.', vehiclePlate: 'T 789 GHI',
           contractStatus: ContractStatus.blocked, daysRemaining: 12, balanceRemaining: 56000, missedPayments: 5, isBlocked: true),
     ];
+    final paymentState = ref.watch(paymentProvider);
+    final allPaid = paymentState.payments.where((p) => p.status == PaymentStatus.paid)
+        .fold<double>(0, (s, p) => s + p.amountPaid);
     final activeRiders = _riders.where((r) => r.contractStatus == ContractStatus.active).length;
     final totalRevenue = _riders.fold<double>(0, (sum, r) => sum + r.balanceRemaining);
 
@@ -61,9 +65,9 @@ class _OwnerDashboardState extends ConsumerState<OwnerDashboard> {
             ]),
             const SizedBox(height: 8),
             Row(children: [
-              Expanded(child: _summaryCard('TSh ${_format(totalRevenue)}', 'Total Revenue', Icons.account_balance_wallet_outlined, AppColors.primary)),
+              Expanded(child: _summaryCard('TSh ${_format(allPaid)}', 'Collected', Icons.account_balance_wallet_outlined, AppColors.success)),
               const SizedBox(width: 8),
-              Expanded(child: _summaryCard('$activeRiders', 'Active Riders', Icons.check_circle_outline, AppColors.success)),
+              Expanded(child: _summaryCard('TSh ${_format(totalRevenue)}', 'Outstanding', Icons.account_balance_wallet_outlined, AppColors.primary)),
             ]),
             const SizedBox(height: 20),
             Row(

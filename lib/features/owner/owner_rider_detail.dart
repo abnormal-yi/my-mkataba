@@ -27,19 +27,15 @@ class _OwnerRiderDetailState extends ConsumerState<OwnerRiderDetail> {
   int _currentIndex = 2;
 
   @override
-  void initState() {
-    super.initState();
-    ref.read(paymentProvider.notifier).fetchByContract('ct-001');
-  }
-
-  @override
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
-    final payments = paymentState.payments.isNotEmpty ? paymentState.payments : List.generate(20, (i) {
+    final riderPayments = paymentState.payments
+        .where((p) => p.riderId == widget.riderId).toList();
+    final payments = riderPayments.isNotEmpty ? riderPayments : List.generate(20, (i) {
       final day = DateTime.now().subtract(Duration(days: 19 - i));
       final status = i > 15 ? PaymentStatus.pending : i == 3 || i == 7 ? PaymentStatus.missed : PaymentStatus.paid;
       return Payment(
-        id: 'or-$i', contractId: 'ct-001', date: day,
+        id: 'or-$i', contractId: 'c1', riderId: widget.riderId, date: day,
         amountPaid: status == PaymentStatus.paid ? 4000 : 0,
         targetAmount: 4000, status: status,
       );
@@ -125,7 +121,7 @@ class _OwnerRiderDetailState extends ConsumerState<OwnerRiderDetail> {
               ],
             ),
             const SizedBox(height: 8),
-            ...payments.reversed.take(10).map((p) => _paymentRow(p, payments)),
+            ...payments.reversed.take(15).map((p) => _paymentRow(p, payments)),
           ],
         ),
       ),
@@ -180,7 +176,7 @@ class _OwnerRiderDetailState extends ConsumerState<OwnerRiderDetail> {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     final paidSoFar = allPayments
-        .where((x) => x.status == PaymentStatus.paid && x.date.isBefore(p.date) || x.date.isAtSameMomentAs(p.date))
+        .where((x) => x.status == PaymentStatus.paid && !x.date.isAfter(p.date))
         .fold<double>(0, (sum, x) => sum + x.amountPaid);
 
     return Padding(

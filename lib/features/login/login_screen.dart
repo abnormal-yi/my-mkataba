@@ -32,22 +32,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  final Map<String, String> _demoPasswords = {
+    'rider@mkataba.com': 'rider123',
+    'owner@mkataba.com': 'owner123',
+    'admin@mkataba.com': 'admin123',
+  };
+
+  Map<String, User> _demoUsers = {
+    'rider@mkataba.com': User(id: 'rider-001', name: 'John', email: 'rider@mkataba.com', role: UserRole.rider),
+    'owner@mkataba.com': User(id: 'owner-001', name: 'Alinda Rwegasila', email: 'owner@mkataba.com', role: UserRole.owner),
+    'admin@mkataba.com': User(id: 'admin-001', name: 'Admin', email: 'admin@mkataba.com', role: UserRole.admin),
+  };
+
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
 
     final email = _emailC.text.trim().toLowerCase();
-    final role = _demoAccounts[email];
+    final password = _passwordC.text;
+    final userData = _demoUsers[email];
 
-    if (role != null) {
-      ref.read(authProvider.notifier).setUser(
-        User(id: '$role-001', name: email.split('@')[0], email: email, role: role),
-        'demo-token',
-      );
-      context.go('/${role.name}');
+    if (userData != null) {
+      final expectedPassword = _demoPasswords[email]!;
+      if (password != expectedPassword) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid email or password')));
+        return;
+      }
+      ref.read(authProvider.notifier).setUser(userData, 'demo-token');
+      context.go('/${userData.role.name}');
       return;
     }
 
-    ref.read(authProvider.notifier).login(email, _passwordC.text);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account not found. Please contact admin.')));
   }
 
   @override
@@ -146,6 +161,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Text('Demo Accounts', style: TextStyle(fontSize: 11, color: AppColors.muted)),
                     const SizedBox(height: 4),
                     Text('rider@mkataba.com / owner@mkataba.com / admin@mkataba.com',
+                      style: const TextStyle(fontSize: 10, color: AppColors.muted)),
+                    Text('Password: rider123 / owner123 / admin123',
                       style: const TextStyle(fontSize: 10, color: AppColors.muted)),
                   ],
                 ),
