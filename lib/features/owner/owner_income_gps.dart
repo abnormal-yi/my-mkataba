@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:my_mkataba/core/theme/app_theme.dart';
 import 'package:my_mkataba/models/app_models.dart';
 import 'package:my_mkataba/providers/rider_summary_provider.dart';
+import 'package:my_mkataba/providers/location_provider.dart';
 import 'package:my_mkataba/widgets/common_widgets.dart';
 
 class OwnerIncomeGps extends ConsumerStatefulWidget {
@@ -30,6 +31,7 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
   Widget build(BuildContext context) {
     final riderState = ref.watch(riderSummaryProvider);
     final riders = riderState.riders.isNotEmpty ? riderState.riders : _riders;
+    final locState = ref.watch(locationProvider);
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -37,8 +39,28 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
         title: Text(_tabIndex == 0 ? 'Payments & Income' : 'GPS Trip Tracking',
             style: const TextStyle(fontFamily: 'Nunito', fontSize: 18, fontWeight: FontWeight.w700)),
         actions: [
+          if (_tabIndex == 1 && locState.isTracking)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: AppColors.successLight, borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle)),
+                const SizedBox(width: 4),
+                const Text('LIVE', style: TextStyle(fontFamily: 'Nunito', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.success)),
+              ]),
+            ),
           GestureDetector(
-            onTap: () => setState(() => _tabIndex = _tabIndex == 0 ? 1 : 0),
+            onTap: () {
+              setState(() {
+                _tabIndex = _tabIndex == 0 ? 1 : 0;
+              });
+              if (_tabIndex == 1) {
+                ref.read(locationProvider.notifier).startTracking();
+              } else {
+                ref.read(locationProvider.notifier).stopTracking();
+              }
+            },
             child: Container(
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -52,7 +74,7 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
           ),
         ],
       ),
-      body: _tabIndex == 0 ? _incomeView(riders) : _tripsView(riders),
+      body: _tabIndex == 0 ? _incomeView(riders) : _tripsView(riders, locState),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex, activeColor: AppColors.accent,
         items: const [
@@ -111,13 +133,13 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
     );
   }
 
-  Widget _tripsView(List<RiderSummary> riders) {
+  Widget _tripsView(List<RiderSummary> riders, LocationState locState) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _tripDashboard(),
+          _tripDashboard(locState),
           const SizedBox(height: 20),
           const SectionLabel('LIVE RIDERS'),
           const SizedBox(height: 8),
@@ -131,16 +153,24 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
     );
   }
 
-  Widget _tripDashboard() {
+  Widget _tripDashboard(LocationState locState) {
+    final pos = locState.currentLocation;
     return ScreenCard(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _tripStat(Icons.trip_origin, '24', 'Today\'s Trips', AppColors.primary),
-          _tripStat(Icons.route_outlined, '68 km', 'Total Distance', AppColors.success),
-          _tripStat(Icons.access_time, '6h 12m', 'Active Time', AppColors.accent),
-        ],
-      ),
+      child: Column(children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _tripStat(Icons.trip_origin, '${pos != null ? pos.speed.round().toString() : '—'}', 'Speed km/h', AppColors.primary),
+            _tripStat(Icons.route_outlined, pos != null ? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}' : '—', 'Coordinates', AppColors.success),
+            _tripStat(Icons.access_time, locState.isTracking ? 'Tracking' : 'Off', 'Status', locState.isTracking ? AppColors.accent : AppColors.muted),
+          ],
+        ),
+        if (locState.error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(locState.error!, style: const TextStyle(fontFamily: 'Nunito', fontSize: 10, color: AppColors.error)),
+          ),
+      ]),
     );
   }
 
@@ -149,7 +179,7 @@ class _OwnerIncomeGpsState extends ConsumerState<OwnerIncomeGps> {
       Container(width: 36, height: 36, decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, size: 18, color: color)),
       const SizedBox(height: 6),
-      Text(value, style: TextStyle(fontFamily: 'Nunito', fontSize: 15, fontWeight: FontWeight.w800, color: color)),
+      Text(value, style: TextStyle(fontFamily: 'Nunito', fontSize: 13, fontWeight: FontWeight.w800, color: color)),
       Text(label, style: const TextStyle(fontFamily: 'Nunito', fontSize: 9, color: AppColors.muted)),
     ]);
   }

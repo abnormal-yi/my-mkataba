@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:my_mkataba/core/theme/app_theme.dart';
 import 'package:my_mkataba/providers/auth_provider.dart';
 import 'package:my_mkataba/widgets/common_widgets.dart';
@@ -14,10 +15,12 @@ class RiderProfile extends ConsumerStatefulWidget {
 
 class _RiderProfileState extends ConsumerState<RiderProfile> {
   int _currentIndex = 4;
+  bool _uploading = false;
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
     final initials = user != null
         ? user.name.split(' ').map((s) => s.isNotEmpty ? s[0] : '').take(2).join()
         : 'R';
@@ -34,8 +37,28 @@ class _RiderProfileState extends ConsumerState<RiderProfile> {
           children: [
             ScreenCard(
               child: Column(children: [
-                CircleAvatar(radius: 36, backgroundColor: AppColors.primaryLight,
-                  child: Text(initials, style: const TextStyle(fontFamily: 'Nunito', fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primary))),
+                GestureDetector(
+                  onTap: _uploading ? null : _pickPhoto,
+                  child: Stack(children: [
+                    CircleAvatar(radius: 36,
+                      backgroundColor: AppColors.primaryLight,
+                      backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                      child: user?.photoUrl == null
+                          ? Text(initials, style: const TextStyle(fontFamily: 'Nunito', fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primary))
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+                        child: _uploading
+                            ? const Padding(padding: EdgeInsets.all(5), child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.white))
+                            : const Icon(Icons.camera_alt, size: 14, color: AppColors.white),
+                      ),
+                    ),
+                  ]),
+                ),
                 const SizedBox(height: 12),
                 Text(user?.name ?? 'Rider', style: const TextStyle(fontFamily: 'Nunito', fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.darkNavy)),
                 Text(user?.email ?? 'rider@mkataba.com', style: const TextStyle(fontFamily: 'Nunito', fontSize: 13, color: AppColors.muted)),
@@ -92,6 +115,18 @@ class _RiderProfileState extends ConsumerState<RiderProfile> {
         },
       ),
     );
+  }
+
+  Future<void> _pickPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512);
+    if (picked == null) return;
+    setState(() => _uploading = true);
+    final url = await ref.read(authProvider.notifier).uploadProfilePhoto(picked.path);
+    setState(() => _uploading = false);
+    if (mounted && url != null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo updated!')));
+    }
   }
 
   Widget _tile(IconData icon, String label, String value) {
