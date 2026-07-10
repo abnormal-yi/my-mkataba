@@ -19,8 +19,9 @@
 
 <div align="center">
 
-![Login](screenshots/login.jpeg)
-![Dashboard](screenshots/dashboard.jpeg)
+<img src="screenshots/screen1.jpeg" width="45%" />
+&nbsp;&nbsp;
+<img src="screenshots/screen2.jpeg" width="45%" />
 
 </div>
 
