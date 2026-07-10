@@ -23,10 +23,6 @@
 |:-----:|:---------:|
 | ![Login](screenshots/login.jpeg) | ![Dashboard](screenshots/dashboard.jpeg) |
 
-| Owner Panel | Rider Panel |
-|:-----------:|:-----------:|
-| ![Owner](screenshots/owner.jpeg) | ![Rider](screenshots/rider.jpeg) |
-
 </div>
 
 ---
