@@ -19,9 +19,8 @@
 
 <div align="center">
 
-| Login | Dashboard |
-|:-----:|:---------:|
-| ![Login](screenshots/login.jpeg) | ![Dashboard](screenshots/dashboard.jpeg) |
+![Login](screenshots/login.jpeg)
+![Dashboard](screenshots/dashboard.jpeg)
 
 </div>
 
@@ -107,6 +106,16 @@ screenshots/        # App screenshots
 ## 📄 License
 
 **Private** — Abnormal Tech Solutions
+
+---
+
+## 📥 Download APK
+
+[![Download APK](https://img.shields.io/badge/Download-MyMkataba.apk-6C3FC5?style=for-the-badge&logo=android)](https://github.com/abnormal-yi/my-mkataba/releases/download/v1.0.0/MyMkataba.apk)
+
+> **Note:** You may need to enable "Install from unknown sources" in your Android settings.
+
+---
 
 <div align="center">
 
