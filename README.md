@@ -1,88 +1,70 @@
 # My Mkataba
 
-**Boda Boda Contract & Payment Management** – Digital contract management platform for Boda Boda owners and riders across Tanzania.
+**Boda Boda Contract Management App** — Track contracts, payments, GPS routes, and rider compliance for motorcycle taxi businesses.
 
 ## Features
 
-- **Multi-Role Access** – Rider, Boda Owner, and Admin dashboards
-- **Contract Lifecycle** – Create, accept, reject, confirm contracts with digital signatures
-- **First-Login Flow** – New riders accept terms and set password before accessing dashboard
-- **Payment Tracking** – Daily/weekly payments via M-Pesa, Tigo Pesa, Airtel Money
-- **Payment Calendar** – Color-coded calendar (green=paid, red=missed, yellow=pending)
-- **Notifications** – Real-time alerts for contract actions, payments, and reminders
-- **Offline-First** – All data stored locally with Dexie.js IndexedDB
-- **Dark Purple Design** – Premium UI with Inter + Poppins typography
+- **Contract Management** — Create and track daily rental contracts between boda owners and riders
+- **Payment Tracking** — Log daily payments (full/partial/short), auto-calculate balances
+- **GPS Monitoring** — Track rider routes during work hours via device GPS
+- **Role-Based Dashboards** — Separate views for Admin, Owner, and Rider
+- **Real-time Notifications** — Payment alerts and contract status updates
+- **PDF Export** — Download payment receipts directly from mobile
+- **Offline-First** — Works offline with Dexie.js (IndexedDB), syncs when online
 
 ## Tech Stack
 
-- **Frontend** – React 18 + Vite
-- **Mobile** – Capacitor (Android APK)
-- **Database** – Dexie.js (IndexedDB)
-- **Icons** – Lucide React
-- **Typography** – Inter (body), Poppins (headings)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19 + Vite |
+| Mobile | Capacitor (Android) |
+| Database | Dexie.js (IndexedDB) |
+| Styling | Custom CSS (no framework) |
+
+## Roles
+
+| Role | Access |
+|------|--------|
+| **Admin** | Full system control — manage owners, riders, view all data |
+| **Owner** | Manage their riders, track payments, view GPS history |
+| **Rider** | View assigned contract, submit daily payments, see payment history |
 
 ## Getting Started
 
+### Web (Development)
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 in your browser.
-
-### Demo Accounts
-
-| Role   | Email                  | Password |
-|--------|------------------------|----------|
-| Rider  | john@mkataba.tz        | 1234     |
-| Rider  | david@mkataba.tz       | 1234     |
-| Owner  | hassan@mkataba.tz      | 1234     |
-| Admin  | admin@mkataba.tz       | 1234     |
-
-> David Kesi has `firstLogin: true` – login to experience the contract acceptance flow.
-
-## Build APK
-
+### Android Build
 ```bash
+npm install
 npm run build
-npx cap sync
-# Edit android/app/capacitor.build.gradle and
-# android/capacitor-cordova-android-plugins/build.gradle
-# Replace VERSION_21 with VERSION_17
+npx cap sync android
 cd android && ./gradlew assembleDebug
 ```
 
-APK output: `android/app/build/outputs/apk/debug/app-debug.apk`
+### Default Login
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@mymkataba.com | 1234 |
+| Owner | Create your own account | — |
 
 ## Project Structure
 
 ```
 src/
-├── components/     # Reusable UI components
-│   ├── Layout.jsx         # App shell with sidebar + bottom nav
-│   ├── Logo.jsx           # Brand logo SVG
-│   ├── StatCard.jsx       # Dashboard stat card
-│   ├── Badge.jsx          # Status badge
-│   ├── ProgressBar.jsx    # Payment progress bar
-│   ├── DataTable.jsx      # Tabular data display
-│   ├── CalendarGrid.jsx   # Monthly payment calendar
-│   ├── NotificationItem.jsx
-│   └── Toast.jsx
-├── pages/          # Route pages
-│   ├── SplashPage.jsx     # Role selection
-│   ├── LoginPage.jsx      # Authentication
-│   ├── RiderDashboard.jsx # First-login + rider portal
-│   ├── OwnerDashboard.jsx # Owner portal
-│   ├── AdminDashboard.jsx # Admin panel
-│   ├── BlockedPage.jsx    # Blocked rider view
-│   └── ContractFormPage.jsx
-├── context/        # Auth state management
-│   └── AuthContext.jsx
-├── data/           # Database layer
-│   └── db.js              # Dexie.js schema + CRUD + seeds
+├── components/     # Reusable UI (Badge, Layout)
+├── context/        # Auth context (AuthContext)
+├── data/           # Database layer (Dexie.js)
+├── pages/          # Route pages (Login, Dashboards)
+├── App.jsx         # Router setup
+├── main.jsx        # Entry point + back button handler
 └── index.css       # Global styles
+android/            # Capacitor Android project
 ```
 
 ## License
 
-MIT
+Private — Abnormal Tech Solutions
